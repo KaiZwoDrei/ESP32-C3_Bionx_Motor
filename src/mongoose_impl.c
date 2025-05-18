@@ -117,70 +117,30 @@ struct apihandler_array {
   uint64_t (*sizer)(void);             // Array size, for data handlers only
 };
 
-struct attribute s_state_attributes[] = {
-  {"speed", "int", NULL, offsetof(struct state, speed), 0, false},
-  {"temperature", "int", NULL, offsetof(struct state, temperature), 0, false},
-  {"humidity", "int", NULL, offsetof(struct state, humidity), 0, false},
-  {"uptime", "int", NULL, offsetof(struct state, uptime), 0, false},
-  {"version", "string", NULL, offsetof(struct state, version), 20, false},
-  {"online", "bool", NULL, offsetof(struct state, online), 0, false},
-  {"lights", "bool", NULL, offsetof(struct state, lights), 0, false},
-  {"level", "int", NULL, offsetof(struct state, level), 0, false},
-  {NULL, NULL, NULL, 0, 0, false}
-};
 struct attribute s_leds_attributes[] = {
   {"led1", "bool", NULL, offsetof(struct leds, led1), 0, false},
-  {"led2", "bool", NULL, offsetof(struct leds, led2), 0, false},
-  {"led3", "bool", NULL, offsetof(struct leds, led3), 0, false},
   {NULL, NULL, NULL, 0, 0, false}
 };
-struct attribute s_network_settings_attributes[] = {
-  {"ip_address", "string", NULL, offsetof(struct network_settings, ip_address), 20, false},
-  {"gw_address", "string", NULL, offsetof(struct network_settings, gw_address), 20, false},
-  {"netmask", "string", NULL, offsetof(struct network_settings, netmask), 20, false},
-  {"dhcp", "bool", NULL, offsetof(struct network_settings, dhcp), 0, false},
+struct attribute s_motor_attributes[] = {
+  {"power", "int", NULL, offsetof(struct motor, power), 0, false},
+  {"level", "int", NULL, offsetof(struct motor, level), 0, false},
+  {"speed", "int", NULL, offsetof(struct motor, speed), 0, false},
   {NULL, NULL, NULL, 0, 0, false}
 };
 struct attribute s_settings_attributes[] = {
-  {"string_val", "string", NULL, offsetof(struct settings, string_val), 40, false},
-  {"log_level", "string", NULL, offsetof(struct settings, log_level), 10, false},
-  {"double_val", "double", "%.5f", offsetof(struct settings, double_val), 0, false},
-  {"int_val", "int", NULL, offsetof(struct settings, int_val), 0, false},
-  {"bool_val", "bool", NULL, offsetof(struct settings, bool_val), 0, false},
-  {NULL, NULL, NULL, 0, 0, false}
-};
-struct attribute s_security_attributes[] = {
-  {"admin_password", "string", NULL, offsetof(struct security, admin_password), 40, false},
-  {"user_password", "string", NULL, offsetof(struct security, user_password), 40, false},
+  {"enableBla", "bool", NULL, offsetof(struct settings, enableBla), 0, false},
+  {"maxspeed", "int", NULL, offsetof(struct settings, maxspeed), 0, false},
   {NULL, NULL, NULL, 0, 0, false}
 };
 
-struct apihandler_action s_apihandler_reboot = {{"reboot", "action", false, 3, 7, 0UL}, glue_check_reboot, glue_start_reboot};
-struct apihandler_action s_apihandler_reformat = {{"reformat", "action", false, 3, 7, 0UL}, glue_check_reformat, glue_start_reformat};
-struct apihandler_ota s_apihandler_firmware_update = {{"firmware_update", "ota", false, 3, 7, 0UL}, glue_ota_begin_firmware_update, glue_ota_end_firmware_update, glue_ota_write_firmware_update};
-struct apihandler_upload s_apihandler_file_upload = {{"file_upload", "upload", false, 3, 7, 0UL}, glue_file_open_file_upload, glue_file_close_file_upload, glue_file_write_file_upload};
-struct apihandler_custom s_apihandler_graph_data = {{"graph_data", "custom", false, 3, 3, 0UL}, glue_reply_graph_data};
-struct apihandler_data s_apihandler_state = {{"state", "data", true, 0, 0, 0UL}, s_state_attributes, sizeof(struct state), (void (*)(void *)) glue_get_state, NULL};
-struct apihandler_data s_apihandler_leds = {{"leds", "data", false, 3, 3, 0UL}, s_leds_attributes, sizeof(struct leds), (void (*)(void *)) glue_get_leds, (void (*)(void *)) glue_set_leds};
-struct apihandler_data s_apihandler_network_settings = {{"network_settings", "data", false, 3, 7, 0UL}, s_network_settings_attributes, sizeof(struct network_settings), (void (*)(void *)) glue_get_network_settings, (void (*)(void *)) glue_set_network_settings};
-struct apihandler_data s_apihandler_settings = {{"settings", "data", false, 3, 7, 0UL}, s_settings_attributes, sizeof(struct settings), (void (*)(void *)) glue_get_settings, (void (*)(void *)) glue_set_settings};
-struct apihandler_data s_apihandler_security = {{"security", "data", false, 7, 7, 0UL}, s_security_attributes, sizeof(struct security), (void (*)(void *)) glue_get_security, (void (*)(void *)) glue_set_security};
-struct apihandler_custom s_apihandler_loglevels = {{"loglevels", "custom", false, 0, 0, 0UL}, glue_reply_loglevels};
-struct apihandler_custom s_apihandler_events = {{"events", "custom", false, 0, 0, 0UL}, glue_reply_events};
+struct apihandler_data s_apihandler_leds = {{"leds", "data", false, 0, 0, 0UL}, s_leds_attributes, sizeof(struct leds), (void (*)(void *)) glue_get_leds, (void (*)(void *)) glue_set_leds};
+struct apihandler_data s_apihandler_motor = {{"motor", "data", false, 0, 0, 0UL}, s_motor_attributes, sizeof(struct motor), (void (*)(void *)) glue_get_motor, (void (*)(void *)) glue_set_motor};
+struct apihandler_data s_apihandler_settings = {{"settings", "data", false, 0, 0, 0UL}, s_settings_attributes, sizeof(struct settings), (void (*)(void *)) glue_get_settings, (void (*)(void *)) glue_set_settings};
 
 static struct apihandler *s_apihandlers[] = {
-  (struct apihandler *) &s_apihandler_reboot,
-  (struct apihandler *) &s_apihandler_reformat,
-  (struct apihandler *) &s_apihandler_firmware_update,
-  (struct apihandler *) &s_apihandler_file_upload,
-  (struct apihandler *) &s_apihandler_graph_data,
-  (struct apihandler *) &s_apihandler_state,
   (struct apihandler *) &s_apihandler_leds,
-  (struct apihandler *) &s_apihandler_network_settings,
-  (struct apihandler *) &s_apihandler_settings,
-  (struct apihandler *) &s_apihandler_security,
-  (struct apihandler *) &s_apihandler_loglevels,
-  (struct apihandler *) &s_apihandler_events
+  (struct apihandler *) &s_apihandler_motor,
+  (struct apihandler *) &s_apihandler_settings
 };
 
 static struct apihandler *get_api_handler(struct mg_str name) {

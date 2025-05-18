@@ -9,7 +9,10 @@
 #include "freertos/event_groups.h"
 #include <WiFi.h>
 #include <WiFiManager.h> 
+// Mongoose includes with proper C linkage
+
 #include "mongoose_glue.h"
+
 
 
 // Globale Task Handles
@@ -26,7 +29,13 @@ extern "C" int lwip_hook_ip6_input(struct pbuf *p, struct netif *inp) {
   }
   return 0;
 }
-
+// Mongoose task function
+void mongooseTask(void *pvParameters) {
+    while (1) {   
+    mongoose_poll();
+      vTaskDelay(pdMS_TO_TICKS(10)); // Call every 200 msfor(;;) {
+    }
+  }  
 void setup() {
     Serial.begin(115200);
     
@@ -44,8 +53,12 @@ void setup() {
     Serial.println("Connected to WiFi!");
     Serial.print("IP address: ");
     Serial.println(WiFi.localIP());
+      // Initialize Mongoose
     mongoose_init();
-  
+
+
+
+
     Serial.println("Mongoose dashboard started on port 80");
 
     setupOTA("bionx-controller");
@@ -55,6 +68,17 @@ void setup() {
     uartSemaphore = xSemaphoreCreateMutex();
     taskEventGroup = xEventGroupCreate();
     setupDisplay();
+
+      // Create Mongoose FreeRTOS task
+    xTaskCreatePinnedToCore(
+    mongooseTask,
+    "Mongoose",
+    8192,        // Increased stack size
+    NULL,
+    4,           // Higher priority than other tasks
+    NULL,
+    1            // Core 1
+  );
     xTaskCreatePinnedToCore(
         otaTask,         // Task function (defined in ota.cpp)
         "OTA",           // Task name
@@ -104,7 +128,8 @@ void setup() {
     );
     
 }
+
+
 void loop() {
-    mongoose_poll();
-    
+ 
 }

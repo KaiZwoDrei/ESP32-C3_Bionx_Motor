@@ -14,9 +14,9 @@ extern "C" {
 #define WIZARD_ENABLE_HTTP 1
 #define WIZARD_ENABLE_HTTPS 0
 #define WIZARD_ENABLE_HTTP_UI 1
-#define WIZARD_ENABLE_HTTP_UI_LOGIN 1
+#define WIZARD_ENABLE_HTTP_UI_LOGIN 0
 
-#define WIZARD_ENABLE_WEBSOCKET 1
+#define WIZARD_ENABLE_WEBSOCKET 0
 
 #define WIZARD_ENABLE_MQTT 0
 #define WIZARD_MQTT_URL ""
@@ -30,7 +30,7 @@ extern "C" {
 #define WIZARD_DNS_URL "udp://8.8.8.8:53"  // Custom DNS server URL
 #define WIZARD_CAPTIVE_PORTAL 0
 #define WIZARD_ENABLE_MDNS 0
-#define WIZARD_MDNS_NAME ""
+#define WIZARD_MDNS_NAME "bionx"
 
 #define WIZARD_ENABLE_MODBUS 0
 #define WIZARD_MODBUS_PORT 502
@@ -86,72 +86,26 @@ void glue_update_state(void);
 
 // Firmware Glue
 
-
-int    glue_authenticate(const char *user, const char *pass);
-
-void glue_start_reboot(struct mg_str);  // Start an action
-bool glue_check_reboot(void);  // Check if action is still in progress
-
-void glue_start_reformat(struct mg_str);  // Start an action
-bool glue_check_reformat(void);  // Check if action is still in progress
-
-void *glue_ota_begin_firmware_update(char *file_name, size_t total_size);
-bool glue_ota_end_firmware_update(void *context);
-bool glue_ota_write_firmware_update(void *context, void *buf, size_t len);
-
-void *glue_file_open_file_upload(char *file_name, size_t total_size);
-bool glue_file_close_file_upload(void *context);
-bool glue_file_write_file_upload(void *context, void *buf, size_t len);
-
-void glue_reply_graph_data(struct mg_connection *, struct mg_http_message *);
-struct state {
-  int speed;
-  int temperature;
-  int humidity;
-  int uptime;
-  char version[20];
-  bool online;
-  bool lights;
-  int level;
-};
-void glue_get_state(struct state *);
-
 struct leds {
   bool led1;
-  bool led2;
-  bool led3;
 };
 void glue_get_leds(struct leds *);
 void glue_set_leds(struct leds *);
 
-struct network_settings {
-  char ip_address[20];
-  char gw_address[20];
-  char netmask[20];
-  bool dhcp;
+struct motor {
+  int power;
+  int level;
+  int speed;
 };
-void glue_get_network_settings(struct network_settings *);
-void glue_set_network_settings(struct network_settings *);
+void glue_get_motor(struct motor *);
+void glue_set_motor(struct motor *);
 
 struct settings {
-  char string_val[40];
-  char log_level[10];
-  double double_val;
-  int int_val;
-  bool bool_val;
+  bool enableBla;
+  int maxspeed;
 };
 void glue_get_settings(struct settings *);
 void glue_set_settings(struct settings *);
-
-struct security {
-  char admin_password[40];
-  char user_password[40];
-};
-void glue_get_security(struct security *);
-void glue_set_security(struct security *);
-
-void glue_reply_loglevels(struct mg_connection *, struct mg_http_message *);
-void glue_reply_events(struct mg_connection *, struct mg_http_message *);
 
 
 #ifdef __cplusplus
