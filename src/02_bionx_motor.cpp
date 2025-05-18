@@ -1,5 +1,5 @@
 #include "05_can_functions.h"
-#include "06_bluetooth_functions.h"
+//#include "06_bluetooth_functions.h"
 #include "10_bionxregg.h"
 #include "02_bionx_motor.h"
 #include "08_uartdisplay.h"
