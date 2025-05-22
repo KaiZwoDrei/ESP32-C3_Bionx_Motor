@@ -13,18 +13,18 @@ void glue_set_leds(struct leds *data) {
   s_leds = *data; // Sync with your device
 }
 
-static struct motor s_motor = {42, 42, 42};
-void glue_get_motor(struct motor *data) {
-  *data = s_motor;  // Sync with your device
-}
-void glue_set_motor(struct motor *data) {
-  s_motor = *data; // Sync with your device
-}
-
 static struct settings s_settings = {42, 42};
 void glue_get_settings(struct settings *data) {
   *data = s_settings;  // Sync with your device
 }
 void glue_set_settings(struct settings *data) {
   s_settings = *data; // Sync with your device
+}
+
+static struct motor s_motor = {42, 42, 42};
+void glue_get_motor(struct motor *data) {
+  *data = s_motor;  // Sync with your device
+}
+void glue_set_motor(struct motor *data) {
+  s_motor = *data; // Sync with your device
 }

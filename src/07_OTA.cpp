@@ -1,4 +1,5 @@
 #include "07_OTA.h"
+#include <mongoose/mongoose_glue.h>
 
 #if USE_ARDUINO_OTA
 #include <ArduinoOTA.h>
@@ -52,7 +53,12 @@ void handleOTA() {
 }
 
 #endif
-
+void mongooseTask(void *pvParameters) {
+    while (1) {   
+    mongoose_poll();
+      vTaskDelay(pdMS_TO_TICKS(30)); // Call every 200 msfor(;;) {
+    }
+  }  
 
 void otaTask(void *parameter) {
     while (1) {

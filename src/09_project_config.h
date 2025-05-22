@@ -10,9 +10,9 @@
 
 // Task Prioritäten
 #define TASK_PRIO_TORQUE   5  // Höchste Priorität
-#define TASK_PRIO_BUTTON   4
+#define TASK_PRIO_BUTTON   5
 #define TASK_PRIO_CAN      5
-#define TASK_PRIO_STATUS   4  
+#define TASK_PRIO_STATUS   5  
 #define TASK_PRIO_BLE      5
 #define TASK_PRIO_DISPLAY  5  // Niedrigste Priorität
 

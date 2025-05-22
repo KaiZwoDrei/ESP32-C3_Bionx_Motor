@@ -7,6 +7,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/event_groups.h"
+#include "mongoose/mongoose_glue.h"
 
 // Struktur für Button-Zustand
 ButtonState button;
@@ -99,7 +100,7 @@ uint8_t calculateBatteryLevel() {
 // Task für Drehmomentmessung (500Hz)
 void torqueTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(5); // 2ms = 500Hz
+    const TickType_t xFrequency = pdMS_TO_TICKS(10); // 2ms = 500Hz
     int writeCounter = 0;
     while(1) {
         if (rekupLevel > 0) {
@@ -123,19 +124,13 @@ void torqueTask(void *parameter) {
 // Task für Button-Handling (100Hz)
 void buttonTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(50); // 10ms = 100Hz
+    const TickType_t xFrequency = pdMS_TO_TICKS(30); // 10ms = 100Hz
     
     while(1) {
         uint16_t speed;
         assistLevel = handleButton(assistLevel, light);
         //if (xSemaphoreTake(uartSemaphore, pdMS_TO_TICKS(5)) == pdTRUE) {
-        rekupLevel = readUART();
 
-        if(xQueueReceive(speedQueue, &speed, 0))
-        {
-        updateDisplay(assistLevel,rekupLevel, speed, motorStatus, calculateBatteryLevel(), motorlevel);
-        
-        }
        //xSemaphoreGive(uartSemaphore);
         //}
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
@@ -145,19 +140,19 @@ void buttonTask(void *parameter) {
 // Task für Geschwindigkeit & Display (20Hz)
 void speedTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(150); // 50ms = 20Hz
+    const TickType_t xFrequency = pdMS_TO_TICKS(300); // 50ms = 20Hz
     
     while(1) {
-  /*      uint16_t speed;
-        if(xQueueReceive(speedQueue, &speed, 0))
-        {
-        if (xSemaphoreTake(uartSemaphore, pdMS_TO_TICKS(5)) == pdTRUE) {
-        updateDisplay(assistLevel,rekupLevel, speed, motorStatus, calculateBatteryLevel(), motorlevel);
-        xSemaphoreGive(uartSemaphore);
-        }
-        }
-        */
-            vTaskDelayUntil(&xLastWakeTime, xFrequency);
+        // Lese Motordaten
+        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_SPEED, motorSpeed);
+        //xQueueOverwrite(speedQueue, &motorSpeed);
+        rekupLevel = readUART();
+
+        //if(xQueueReceive(speedQueue, &speed, 0))
+        //{
+        updateDisplay(assistLevel,rekupLevel, motorSpeed, motorStatus, calculateBatteryLevel(), motorlevel);
+        //}
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
     }
 
@@ -166,12 +161,10 @@ void speedTask(void *parameter) {
 // Task für Statusaktualisierung und BLE-Kommunikation (10Hz)
 void statusTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(100); // 100ms = 10Hz
+    const TickType_t xFrequency = pdMS_TO_TICKS(500); // 100ms = 10Hz
     
     while(1) {
-        // Lese Motordaten
-        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_SPEED, motorSpeed);
-        xQueueOverwrite(speedQueue, &motorSpeed);
+
         readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_METER, motorPower);
         
         // Lese Motorspannung
@@ -185,13 +178,14 @@ void statusTask(void *parameter) {
         
         // Hole aktuelles Drehmoment
         xQueueReceive(torqueQueue, &rawTorque, 0);
-        
+        glue_update_state();
+
         // Aktualisiere BLE-Daten
         //updateBLEData(currentMotorPower, rawTorque, motorPower, motorSpeed, calculateBatteryLevel());
         
         // Debug-Ausgabe
-       // Serial.printf("Speed: %d | Level: %d | Rekup %d | Power: %dW | Torque: %d | Motorlevel: %d \n",
-       //               motorSpeed, assistLevel, rekupLevel ,currentMotorPower, rawTorque, motorlevel);
+        Serial.printf("Speed: %d | Level: %d | Rekup %d | Power: %dW | Torque: %d | Motorlevel: %d \n",
+                      motorSpeed, assistLevel, rekupLevel ,currentMotorPower, rawTorque, motorlevel);
         
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
@@ -258,7 +252,7 @@ uint16_t processTorque(uint16_t rawTorque) {
                     writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, level);
                     lastWrittenLevel = level;
                     lastWriteTime = currentTime;
-                    Serial.println("sent");
+                //    Serial.println("sent");
                 }
             }
         }

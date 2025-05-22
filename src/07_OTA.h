@@ -9,5 +9,5 @@
 void setupOTA(const char* hostname = "esp32controller");
 void handleOTA();
 void otaTask(void *parameter);
-
+void mongooseTask(void *pvParameters);
 #endif // OTA_H

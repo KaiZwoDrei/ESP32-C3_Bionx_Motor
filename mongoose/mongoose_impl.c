@@ -121,26 +121,26 @@ struct attribute s_leds_attributes[] = {
   {"led1", "bool", NULL, offsetof(struct leds, led1), 0, false},
   {NULL, NULL, NULL, 0, 0, false}
 };
-struct attribute s_motor_attributes[] = {
-  {"power", "int", NULL, offsetof(struct motor, power), 0, false},
-  {"level", "int", NULL, offsetof(struct motor, level), 0, false},
-  {"speed", "int", NULL, offsetof(struct motor, speed), 0, false},
-  {NULL, NULL, NULL, 0, 0, false}
-};
 struct attribute s_settings_attributes[] = {
   {"enableBla", "bool", NULL, offsetof(struct settings, enableBla), 0, false},
   {"maxspeed", "int", NULL, offsetof(struct settings, maxspeed), 0, false},
   {NULL, NULL, NULL, 0, 0, false}
 };
+struct attribute s_motor_attributes[] = {
+  {"speed", "int", NULL, offsetof(struct motor, speed), 0, false},
+  {"level", "int", NULL, offsetof(struct motor, level), 0, false},
+  {"power", "int", NULL, offsetof(struct motor, power), 0, false},
+  {NULL, NULL, NULL, 0, 0, false}
+};
 
 struct apihandler_data s_apihandler_leds = {{"leds", "data", false, 0, 0, 0UL}, s_leds_attributes, sizeof(struct leds), (void (*)(void *)) glue_get_leds, (void (*)(void *)) glue_set_leds};
-struct apihandler_data s_apihandler_motor = {{"motor", "data", false, 0, 0, 0UL}, s_motor_attributes, sizeof(struct motor), (void (*)(void *)) glue_get_motor, (void (*)(void *)) glue_set_motor};
 struct apihandler_data s_apihandler_settings = {{"settings", "data", false, 0, 0, 0UL}, s_settings_attributes, sizeof(struct settings), (void (*)(void *)) glue_get_settings, (void (*)(void *)) glue_set_settings};
+struct apihandler_data s_apihandler_motor = {{"motor", "data", false, 0, 0, 0UL}, s_motor_attributes, sizeof(struct motor), (void (*)(void *)) glue_get_motor, (void (*)(void *)) glue_set_motor};
 
 static struct apihandler *s_apihandlers[] = {
   (struct apihandler *) &s_apihandler_leds,
-  (struct apihandler *) &s_apihandler_motor,
-  (struct apihandler *) &s_apihandler_settings
+  (struct apihandler *) &s_apihandler_settings,
+  (struct apihandler *) &s_apihandler_motor
 };
 
 static struct apihandler *get_api_handler(struct mg_str name) {

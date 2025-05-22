@@ -28,8 +28,8 @@ extern "C" {
 
 #define WIZARD_DNS_TYPE 0  // 0: default Google, 1: DHCP, 2: custom
 #define WIZARD_DNS_URL "udp://8.8.8.8:53"  // Custom DNS server URL
-#define WIZARD_CAPTIVE_PORTAL 0
-#define WIZARD_ENABLE_MDNS 0
+#define WIZARD_CAPTIVE_PORTAL 1
+#define WIZARD_ENABLE_MDNS 1
 #define WIZARD_MDNS_NAME "bionx"
 
 #define WIZARD_ENABLE_MODBUS 0
@@ -63,14 +63,6 @@ void mongoose_set_modbus_handlers(struct mongoose_modbus_handlers *);
 
 void mongoose_set_auth_handler(int (*fn)(const char *user, const char *pass));
 
-#define run_mongoose() \
-  do {                 \
-    mongoose_init();   \
-    for (;;) {         \
-      mongoose_poll(); \
-    }                  \
-  } while (0)
-
 #if WIZARD_ENABLE_MQTT
 void glue_lock_init(void);  // Initialise global Mongoose mutex
 void glue_lock(void);       // Lock global Mongoose mutex
@@ -92,20 +84,20 @@ struct leds {
 void glue_get_leds(struct leds *);
 void glue_set_leds(struct leds *);
 
-struct motor {
-  int power;
-  int level;
-  int speed;
-};
-void glue_get_motor(struct motor *);
-void glue_set_motor(struct motor *);
-
 struct settings {
   bool enableBla;
   int maxspeed;
 };
 void glue_get_settings(struct settings *);
 void glue_set_settings(struct settings *);
+
+struct motor {
+  int speed;
+  int level;
+  int power;
+};
+void glue_get_motor(struct motor *);
+void glue_set_motor(struct motor *);
 
 
 #ifdef __cplusplus

@@ -11,8 +11,10 @@
 #include <WiFiManager.h> 
 // Mongoose includes with proper C linkage
 
-#include "mongoose_glue.h"
-
+#include "mongoose/mongoose_glue.h"
+extern int16_t assistLevel;
+extern uint16_t motorSpeed;
+extern uint16_t motorPower;
 
 
 // Globale Task Handles
@@ -29,13 +31,7 @@ extern "C" int lwip_hook_ip6_input(struct pbuf *p, struct netif *inp) {
   }
   return 0;
 }
-// Mongoose task function
-void mongooseTask(void *pvParameters) {
-    while (1) {   
-    mongoose_poll();
-      vTaskDelay(pdMS_TO_TICKS(10)); // Call every 200 msfor(;;) {
-    }
-  }  
+
 void setup() {
     Serial.begin(115200);
     
@@ -55,13 +51,12 @@ void setup() {
     Serial.println(WiFi.localIP());
       // Initialize Mongoose
     mongoose_init();
-
-
+    mg_log_set(MG_LL_ERROR); 
 
 
     Serial.println("Mongoose dashboard started on port 80");
 
-    setupOTA("bionx-controller");
+  //  setupOTA("bionx-controller");
     setupCAN();
     setupBionx();
  //   setupBLE();
@@ -73,7 +68,7 @@ void setup() {
     xTaskCreatePinnedToCore(
     mongooseTask,
     "Mongoose",
-    8192,        // Increased stack size
+    TASK_STACK_SIZE*4,        // Increased stack size
     NULL,
     4,           // Higher priority than other tasks
     NULL,
@@ -82,7 +77,7 @@ void setup() {
     xTaskCreatePinnedToCore(
         otaTask,         // Task function (defined in ota.cpp)
         "OTA",           // Task name
-        4096,            // Stack size
+        TASK_STACK_SIZE*2,            // Stack size
         NULL,            // Parameter
         1,               // Priority (lowest is fine)
         NULL,            // Task handle (optional)
@@ -131,5 +126,4 @@ void setup() {
 
 
 void loop() {
- 
 }

@@ -7,18 +7,18 @@
 const uint8_t RX_PIN = 1;
 const uint8_t Button_PIN = 0;
 
-// Button Struktur
+
+// Button state struct for RTOS-safe handling
 struct ButtonState {
     bool lastState = HIGH;
     bool debouncedState = HIGH;
-    unsigned long lastDebounceTime = 0;
-    unsigned long lastPressTime = 0;
-    unsigned long lastReleaseTime = 0;
-    unsigned long pressStartTime = 0;
+    TickType_t lastDebounceTime = 0;
+    TickType_t pressStartTime = 0;
+    TickType_t lastReleaseTime = 0;
+    TickType_t lastPressTime = 0;
+    int pressCount = 0;
     bool longPressHandled = false;
-    uint8_t pressCount = 0;
 };
-
 
 
 

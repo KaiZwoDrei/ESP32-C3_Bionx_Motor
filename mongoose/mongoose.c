@@ -1655,7 +1655,7 @@ static bool vcb(uint8_t c) {
 static size_t clen(const char *s, const char *end) {
   const unsigned char *u = (unsigned char *) s, c = *u;
   long n = (long) (end - s);
-  if (c > ' ' && c < '~') return 1;  // Usual ascii printed char
+  if (c > ' ' && c <= '~') return 1;  // Usual ascii printed char
   if ((c & 0xe0) == 0xc0 && n > 1 && vcb(u[1])) return 2;  // 2-byte UTF8
   if ((c & 0xf0) == 0xe0 && n > 2 && vcb(u[1]) && vcb(u[2])) return 3;
   if ((c & 0xf8) == 0xf0 && n > 3 && vcb(u[1]) && vcb(u[2]) && vcb(u[3]))
@@ -4127,6 +4127,9 @@ void mg_mgr_free(struct mg_mgr *mgr) {
   if (mgr->epoll_fd >= 0) close(mgr->epoll_fd), mgr->epoll_fd = -1;
 #endif
   mg_tls_ctx_free(mgr);
+#if MG_ENABLE_TCPIP
+  if (mgr->ifp) mg_tcpip_free(mgr->ifp);
+#endif
 }
 
 void mg_mgr_init(struct mg_mgr *mgr) {
@@ -4162,7 +4165,7 @@ void mg_mgr_init(struct mg_mgr *mgr) {
 #endif
 
 
-#if defined(MG_ENABLE_TCPIP) && MG_ENABLE_TCPIP
+#if MG_ENABLE_TCPIP
 #define MG_EPHEMERAL_PORT_BASE 32768
 #define PDIFF(a, b) ((size_t) (((char *) (b)) - ((char *) (a))))
 
@@ -4742,7 +4745,7 @@ static struct mg_connection *accept_conn(struct mg_connection *lsn,
     return NULL;
   }
   struct connstate *s = (struct connstate *) (c + 1);
-  s->dmss = 536;     // assume default, RFC-9293 3.7.1
+  s->dmss = 1460; // TODO(scaprile): 536;     // assume default, RFC-9293 3.7.1
   s->seq = mg_ntohl(pkt->tcp->ack), s->ack = mg_ntohl(pkt->tcp->seq);
   memcpy(s->mac, pkt->eth->src, sizeof(s->mac));
   settmout(c, MIP_TTYPE_KEEPALIVE);
@@ -4916,7 +4919,7 @@ static void read_conn(struct mg_connection *c, struct pkt *pkt) {
 // process options (MSS)
 static void handle_opt(struct connstate *s, struct tcp *tcp) {
   uint8_t *opts = (uint8_t *) (tcp + 1);
-  int len = 4 * ((int) (tcp->off >> 4) - (sizeof(*tcp) / 4));
+  int len = 4 * ((int) (tcp->off >> 4) - ((int) sizeof(*tcp) / 4));
   s->dmss = 536;     // assume default, RFC-9293 3.7.1
   while (len > 0) {  // RFC-9293 3.1 3.2
     uint8_t kind = opts[0], optlen = 1;
@@ -4926,7 +4929,7 @@ static void handle_opt(struct connstate *s, struct tcp *tcp) {
       if (kind == 2 && optlen == 4)  // set received MSS
         s->dmss = (uint16_t) (((uint16_t) opts[2] << 8) + opts[3]);
     }
-    MG_INFO(("kind: %u, optlen: %u, len: %d\n", kind, optlen, len));
+    MG_VERBOSE(("kind: %u, optlen: %u, len: %d\n", kind, optlen, len));
     opts += optlen;
     len -= optlen;
   }
@@ -19783,6 +19786,7 @@ int mg_check_ip_acl(struct mg_str acl, struct mg_addr *remote_ip) {
 bool mg_path_is_sane(const struct mg_str path) {
   const char *s = path.buf;
   size_t n = path.len;
+  if (path.buf[0] == '~') return false;  // Starts with ~
   if (path.buf[0] == '.' && path.buf[1] == '.') return false;  // Starts with ..
   for (; s[0] != '\0' && n > 0; s++, n--) {
     if ((s[0] == '/' || s[0] == '\\') && n >= 2) {   // Subdir?

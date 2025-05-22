@@ -3,10 +3,10 @@
 #include <Arduino.h>
 
 
-const int32_t TORQUE_FACTOR = int32_t(1.5625 * 65536);
-const int32_t PEAK_WEIGHT = int32_t(0.7 * 65536);
-const int32_t CURVE_WEIGHT = int32_t(0.3 * 65536);
-const int32_t GAUGE_DECAY = int32_t(0.95 * 65536);
+const int32_t TORQUE_FACTOR = (int32_t)(1.5625 * 65536);
+const int32_t PEAK_WEIGHT = (int32_t)(0.7 * 65536);
+const int32_t CURVE_WEIGHT = (int32_t)(0.3 * 65536);
+const int32_t GAUGE_DECAY = (int32_t)(0.95 * 65536);
 const int32_t TORQUE_THRESHOLD = 5;
 // Zeitintervalle
 const unsigned long STATUS_INTERVAL = 1000;  // 1 Hz
