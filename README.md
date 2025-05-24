@@ -13,3 +13,4 @@ You need
 1x Buck converter to 5V for the Dashboard and ESP32
 
 
+![grafik](https://github.com/user-attachments/assets/a93e0927-fc27-4fb2-8f0e-bc443eef5c8a)
