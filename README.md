@@ -5,6 +5,7 @@ You need
 1x ESP32-C3
 
 1x Chinese Dashboard clone
+![IMG_4050-2839271217](https://github.com/user-attachments/assets/e5ca60f4-7d8f-4e69-aef7-24112fe453c1)
 
 1x Canbus Transceiver SN65HVD230 
 
