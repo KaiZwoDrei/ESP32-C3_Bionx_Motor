@@ -12,5 +12,7 @@ You need
 
 1x Buck converter to 5V for the Dashboard and ESP32
 
+I added mongoose.ws dashboard to be able to change the settings for debugging and riding setting style.
+It updates every second and i want to add most CAN settings to the dashboard so it's possible to change them over the webserver.
 
 ![grafik](https://github.com/user-attachments/assets/a93e0927-fc27-4fb2-8f0e-bc443eef5c8a)
