@@ -132,15 +132,28 @@ struct attribute s_motor_attributes[] = {
   {"power", "int", NULL, offsetof(struct motor, power), 0, false},
   {NULL, NULL, NULL, 0, 0, false}
 };
+struct attribute s_state_attributes[] = {
+  {"battery", "int", NULL, offsetof(struct state, battery), 0, false},
+  {"power", "int", NULL, offsetof(struct state, power), 0, false},
+  {"torque", "int", NULL, offsetof(struct state, torque), 0, false},
+  {"temperature", "int", NULL, offsetof(struct state, temperature), 0, false},
+  {NULL, NULL, NULL, 0, 0, false}
+};
 
 struct apihandler_data s_apihandler_leds = {{"leds", "data", false, 0, 0, 0UL}, s_leds_attributes, sizeof(struct leds), (void (*)(void *)) glue_get_leds, (void (*)(void *)) glue_set_leds};
 struct apihandler_data s_apihandler_settings = {{"settings", "data", false, 0, 0, 0UL}, s_settings_attributes, sizeof(struct settings), (void (*)(void *)) glue_get_settings, (void (*)(void *)) glue_set_settings};
 struct apihandler_data s_apihandler_motor = {{"motor", "data", false, 0, 0, 0UL}, s_motor_attributes, sizeof(struct motor), (void (*)(void *)) glue_get_motor, (void (*)(void *)) glue_set_motor};
+struct apihandler_data s_apihandler_state = {{"state", "data", true, 0, 0, 0UL}, s_state_attributes, sizeof(struct state), (void (*)(void *)) glue_get_state, NULL};
+struct apihandler_ota s_apihandler_firmware_update = {{"firmware_update", "ota", false, 0, 0, 0UL}, glue_ota_begin_firmware_update, glue_ota_end_firmware_update, glue_ota_write_firmware_update};
+struct apihandler_action s_apihandler_reboot = {{"reboot", "action", false, 0, 0, 0UL}, glue_check_reboot, glue_start_reboot};
 
 static struct apihandler *s_apihandlers[] = {
   (struct apihandler *) &s_apihandler_leds,
   (struct apihandler *) &s_apihandler_settings,
-  (struct apihandler *) &s_apihandler_motor
+  (struct apihandler *) &s_apihandler_motor,
+  (struct apihandler *) &s_apihandler_state,
+  (struct apihandler *) &s_apihandler_firmware_update,
+  (struct apihandler *) &s_apihandler_reboot
 };
 
 static struct apihandler *get_api_handler(struct mg_str name) {

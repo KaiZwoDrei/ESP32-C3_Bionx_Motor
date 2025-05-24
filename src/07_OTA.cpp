@@ -33,8 +33,10 @@ void handleOTA() {
     ArduinoOTA.handle();
 }
 
-#else // Use ElegantOTA
+#else // Use MongooseOTA
 
+#endif
+/*
 #include <WiFi.h>
 #include <WebServer.h>
 #include <ElegantOTA.h>
@@ -53,6 +55,7 @@ void handleOTA() {
 }
 
 #endif
+*/
 void mongooseTask(void *pvParameters) {
     while (1) {   
     mongoose_poll();

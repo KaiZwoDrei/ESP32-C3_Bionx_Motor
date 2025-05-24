@@ -22,7 +22,7 @@ TaskHandle_t torqueTaskHandle = NULL;
 TaskHandle_t buttonTaskHandle = NULL;
 SemaphoreHandle_t uartSemaphore;
 EventGroupHandle_t taskEventGroup;
-static struct mg_mgr mgr;
+/*static struct mg_mgr mgr;
 extern "C" int lwip_hook_ip6_input(struct pbuf *p, struct netif *inp) __attribute__((weak));
 extern "C" int lwip_hook_ip6_input(struct pbuf *p, struct netif *inp) {
   if (ip6_addr_isany_val(inp->ip6_addr[0].u_addr.ip6)) {
@@ -30,7 +30,7 @@ extern "C" int lwip_hook_ip6_input(struct pbuf *p, struct netif *inp) {
     return 1;
   }
   return 0;
-}
+}*/
 
 void setup() {
     Serial.begin(115200);

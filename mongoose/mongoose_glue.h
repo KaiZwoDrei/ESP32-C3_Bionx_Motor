@@ -26,8 +26,8 @@ extern "C" {
 #define WIZARD_SNTP_URL "udp://time.google.com:123"  // Custom SNTP server URL
 #define WIZARD_SNTP_INTERVAL_SECONDS 3600            // Frequency of SNTP syncs
 
-#define WIZARD_DNS_TYPE 0  // 0: default Google, 1: DHCP, 2: custom
-#define WIZARD_DNS_URL "udp://8.8.8.8:53"  // Custom DNS server URL
+#define WIZARD_DNS_TYPE 2  // 0: default Google, 1: DHCP, 2: custom
+#define WIZARD_DNS_URL "192.168.178.1"  // Custom DNS server URL
 #define WIZARD_CAPTIVE_PORTAL 1
 #define WIZARD_ENABLE_MDNS 1
 #define WIZARD_MDNS_NAME "bionx"
@@ -98,6 +98,21 @@ struct motor {
 };
 void glue_get_motor(struct motor *);
 void glue_set_motor(struct motor *);
+
+struct state {
+  int battery;
+  int power;
+  int torque;
+  int temperature;
+};
+void glue_get_state(struct state *);
+
+void *glue_ota_begin_firmware_update(char *file_name, size_t total_size);
+bool glue_ota_end_firmware_update(void *context);
+bool glue_ota_write_firmware_update(void *context, void *buf, size_t len);
+
+void glue_start_reboot(struct mg_str);  // Start an action
+bool glue_check_reboot(void);  // Check if action is still in progress
 
 
 #ifdef __cplusplus
