@@ -3,5 +3,5 @@
 .vscode/c_cpp_properties.json
 .vscode/launch.json
 .vscode/ipch
-mongoose
+/mongoose
 /src/mongoose/mongoose_fs.c
