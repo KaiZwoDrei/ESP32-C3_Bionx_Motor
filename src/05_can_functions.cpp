@@ -3,7 +3,8 @@
 //#include "can_functions.h"
 
 void setupCAN() {
-    CAN0.setCANPins(GPIO_NUM_19, GPIO_NUM_13);
+    CAN0.setCANPins(GPIO_NUM_19, GPIO_NUM_13); //old config
+    //CAN0.setCANPins(GPIO_NUM_8, GPIO_NUM_9); //new config
     CAN0.begin(125000);
 }
 /*OLD VERSION 
