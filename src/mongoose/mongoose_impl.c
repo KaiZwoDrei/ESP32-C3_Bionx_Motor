@@ -122,6 +122,10 @@ struct attribute s_leds_attributes[] = {
   {NULL, NULL, NULL, 0, 0, false}
 };
 struct attribute s_settings_attributes[] = {
+  {"log_level", "int", NULL, offsetof(struct settings, log_level), 0, false},
+  {"bool_val", "bool", NULL, offsetof(struct settings, bool_val), 0, false},
+  {"string_val", "string", NULL, offsetof(struct settings, string_val), 20, false},
+  {"level", "int", NULL, offsetof(struct settings, level), 0, false},
   {"enableBla", "bool", NULL, offsetof(struct settings, enableBla), 0, false},
   {"maxspeed", "int", NULL, offsetof(struct settings, maxspeed), 0, false},
   {NULL, NULL, NULL, 0, 0, false}
@@ -133,6 +137,7 @@ struct attribute s_motor_attributes[] = {
   {NULL, NULL, NULL, 0, 0, false}
 };
 struct attribute s_state_attributes[] = {
+  {"version", "string", NULL, offsetof(struct state, version), 20, false},
   {"battery", "int", NULL, offsetof(struct state, battery), 0, false},
   {"power", "int", NULL, offsetof(struct state, power), 0, false},
   {"torque", "int", NULL, offsetof(struct state, torque), 0, false},

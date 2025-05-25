@@ -46,7 +46,7 @@ void glue_set_settings(struct settings *data) {
   s_settings = *data; // Sync with your device
 }
 
-static struct state s_state = {42, 42, 42, 42};
+static struct state s_state = {50, 160, 170, 180};
 void glue_get_state(struct state *data) {
   *data = s_state;  // Sync with your device
 }

@@ -32,7 +32,12 @@ void setupOTA(const char* hostname) {
 void handleOTA() {
     ArduinoOTA.handle();
 }
-
+void otaTask(void *parameter) {
+    while (1) {
+        handleOTA();                  // Your OTA handler (ArduinoOTA.handle() or ElegantOTA's .handleClient())
+        vTaskDelay(pdMS_TO_TICKS(200)); // Call every 200 ms
+    }
+}
 #else // Use MongooseOTA
 
 #endif
@@ -59,13 +64,7 @@ void handleOTA() {
 void mongooseTask(void *pvParameters) {
     while (1) {   
     mongoose_poll();
-      vTaskDelay(pdMS_TO_TICKS(30)); // Call every 200 msfor(;;) {
+      vTaskDelay(pdMS_TO_TICKS(10)); // Call every 30 msfor(;;) {
     }
   }  
 
-void otaTask(void *parameter) {
-    while (1) {
-        handleOTA();                  // Your OTA handler (ArduinoOTA.handle() or ElegantOTA's .handleClient())
-        vTaskDelay(pdMS_TO_TICKS(200)); // Call every 200 ms
-    }
-}

@@ -26,10 +26,10 @@ extern "C" {
 #define WIZARD_SNTP_URL "udp://time.google.com:123"  // Custom SNTP server URL
 #define WIZARD_SNTP_INTERVAL_SECONDS 3600            // Frequency of SNTP syncs
 
-#define WIZARD_DNS_TYPE 2  // 0: default Google, 1: DHCP, 2: custom
+#define WIZARD_DNS_TYPE 0  // 0: default Google, 1: DHCP, 2: custom
 #define WIZARD_DNS_URL "192.168.178.1"  // Custom DNS server URL
-#define WIZARD_CAPTIVE_PORTAL 1
-#define WIZARD_ENABLE_MDNS 1
+#define WIZARD_CAPTIVE_PORTAL 0
+#define WIZARD_ENABLE_MDNS 0
 #define WIZARD_MDNS_NAME "bionx"
 
 #define WIZARD_ENABLE_MODBUS 0
@@ -85,6 +85,10 @@ void glue_get_leds(struct leds *);
 void glue_set_leds(struct leds *);
 
 struct settings {
+  int log_level;
+  bool bool_val;
+  char string_val[20];
+  int level;
   bool enableBla;
   int maxspeed;
 };
@@ -100,6 +104,7 @@ void glue_get_motor(struct motor *);
 void glue_set_motor(struct motor *);
 
 struct state {
+  char version[20];  // version
   int battery;
   int power;
   int torque;

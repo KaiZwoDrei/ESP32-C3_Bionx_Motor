@@ -22,15 +22,9 @@ TaskHandle_t torqueTaskHandle = NULL;
 TaskHandle_t buttonTaskHandle = NULL;
 SemaphoreHandle_t uartSemaphore;
 EventGroupHandle_t taskEventGroup;
-/*static struct mg_mgr mgr;
-extern "C" int lwip_hook_ip6_input(struct pbuf *p, struct netif *inp) __attribute__((weak));
-extern "C" int lwip_hook_ip6_input(struct pbuf *p, struct netif *inp) {
-  if (ip6_addr_isany_val(inp->ip6_addr[0].u_addr.ip6)) {
-    pbuf_free(p);
-    return 1;
-  }
-  return 0;
-}*/
+
+
+
 
 void setup() {
     Serial.begin(115200);
@@ -51,7 +45,7 @@ void setup() {
     Serial.println(WiFi.localIP());
       // Initialize Mongoose
     mongoose_init();
-    mg_log_set(MG_LL_ERROR); 
+    //mg_log_set(MG_LL_ERROR); 
 
 
     Serial.println("Mongoose dashboard started on port 80");
@@ -74,15 +68,7 @@ void setup() {
     NULL,
     1            // Core 1
   );
-    xTaskCreatePinnedToCore(
-        otaTask,         // Task function (defined in ota.cpp)
-        "OTA",           // Task name
-        TASK_STACK_SIZE*2,            // Stack size
-        NULL,            // Parameter
-        1,               // Priority (lowest is fine)
-        NULL,            // Task handle (optional)
-        1                // Core (choose 0 or 1, as fits your system)
-    );
+ 
     xTaskCreatePinnedToCore(
         torqueTask,
         "Torque",

@@ -4,10 +4,6 @@
 #include <Arduino.h>
 
 // Select OTA method: set to 1 for Arduino OTA (espota), 0 for ElegantOTA (web)
-#define USE_ARDUINO_OTA 1
-
-void setupOTA(const char* hostname = "esp32controller");
-void handleOTA();
-void otaTask(void *parameter);
+#define USE_ARDUINO_OTA 0
 void mongooseTask(void *pvParameters);
 #endif // OTA_H
