@@ -49,7 +49,7 @@ void setupBionx() {
     // Warte auf erfolgreiche Verbindung zum Motor
     for(int i=0; i<=10;i++) 
     {
-        if(!readBionxRegister(BXID_MOTOR, BXR_MOTOR_SWVERS, softwareVersion))
+        if(!readBionxRegister(BXID_MOTOR, BXR_MOTOR_SWVERS, &softwareVersion))
          {
         Serial.println("Cannot read software version from motor!");
         
@@ -63,8 +63,8 @@ void setupBionx() {
     
     // Lese maximalen Motorstrom
     uint16_t currentHi, currentLo;
-    readBionxRegister(BXID_MOTOR, REG_MOTOR_CONFIG_MAX_DISCHARGE_HI, currentHi);
-    readBionxRegister(BXID_MOTOR, REG_MOTOR_CONFIG_MAX_DISCHARGE_LO, currentLo);
+    readBionxRegister(BXID_MOTOR, REG_MOTOR_CONFIG_MAX_DISCHARGE_HI, &currentHi);
+    readBionxRegister(BXID_MOTOR, REG_MOTOR_CONFIG_MAX_DISCHARGE_LO, &currentLo);
     maxMotorCurrent = (currentHi << 8) | currentLo;
     Serial.print("Maximaler Motor Strom: ");
     Serial.println(maxMotorCurrent);
@@ -112,7 +112,7 @@ void torqueTask(void *parameter) {
         } else {
             writeCounter = 0;
         uint16_t rawTorque;
-        if(readBionxRegister(BXID_MOTOR, REG_MOTOR_TORQUE_GAUGE_VALUE, rawTorque)) {
+        if(readBionxRegister(BXID_MOTOR, REG_MOTOR_TORQUE_GAUGE_VALUE, &rawTorque)) {
             xQueueOverwrite(torqueQueue, &rawTorque);
             motorlevel = processTorque(rawTorque);
         }
@@ -144,7 +144,7 @@ void speedTask(void *parameter) {
     
     while(1) {
         // Lese Motordaten
-        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_SPEED, motorSpeed);
+        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_SPEED, &motorSpeed);
         //xQueueOverwrite(speedQueue, &motorSpeed);
         rekupLevel = readUART();
 
@@ -165,12 +165,12 @@ void statusTask(void *parameter) {
     
     while(1) {
 
-        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_METER, motorPower);
+        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_METER, &motorPower);
         
         // Lese Motorspannung
         uint16_t voltageHigh, voltageLow;
-        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_VOLTAGE_HI, voltageHigh);
-        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_VOLTAGE_LO, voltageLow);
+        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_VOLTAGE_HI, &voltageHigh);
+        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_VOLTAGE_LO, &voltageLow);
         motorVoltage = (voltageHigh << 8) | voltageLow;
         
         // Berechne aktuelle Motorleistung

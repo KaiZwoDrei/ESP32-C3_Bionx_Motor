@@ -1,3 +1,4 @@
+
 //#include "06_bluetooth_functions.h"
 #include "07_OTA.h"
 #include "02_bionx_motor.h"
@@ -46,6 +47,7 @@ void setup() {
       // Initialize Mongoose
     mongoose_init();
     //mg_log_set(MG_LL_ERROR); 
+    // Create Mongoose FreeRTOS task
 
 
     Serial.println("Mongoose dashboard started on port 80");
@@ -58,16 +60,7 @@ void setup() {
     taskEventGroup = xEventGroupCreate();
     setupDisplay();
 
-      // Create Mongoose FreeRTOS task
-    xTaskCreatePinnedToCore(
-    mongooseTask,
-    "Mongoose",
-    TASK_STACK_SIZE*4,        // Increased stack size
-    NULL,
-    4,           // Higher priority than other tasks
-    NULL,
-    1            // Core 1
-  );
+  
  
     xTaskCreatePinnedToCore(
         torqueTask,
@@ -107,7 +100,15 @@ void setup() {
         NULL,
         0
     );
-    
+    xTaskCreatePinnedToCore(
+      mongooseTask,
+      "Mongoose",
+      TASK_STACK_SIZE*4,        // Increased stack size
+      NULL,
+      4,           // Higher priority than other tasks
+      NULL,
+      1            // Core 1
+    );
 }
 
 

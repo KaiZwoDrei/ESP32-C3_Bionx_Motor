@@ -1,10 +1,15 @@
-#ifndef CAN_FUNCTIONS_H
-#define CAN_FUNCTIONS_H
+#pragma once
+#include <stdint.h>
+#include <stdbool.h>
 
-#include <Arduino.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-void setupCAN();
-bool readBionxRegister(int canId, uint16_t address, uint16_t &result);
+void setupCAN(void);
+bool readBionxRegister(int canId, uint16_t address, uint16_t *result);
 bool writeBionxRegister(int canId, uint16_t address, uint16_t value);
 
-#endif // CAN_FUNCTIONS_H
+#ifdef __cplusplus
+}
+#endif

@@ -1,5 +1,4 @@
-#ifndef UART_DISPLAY_H
-#define UART_DISPLAY_H
+#pragma once
 
 #include <Arduino.h>
 
@@ -30,4 +29,3 @@ uint8_t getModeDisplay(int8_t assistLevel, int8_t recuplevel);
 int16_t readUART();
 void uart_event_task(void *parameter);
 
-#endif

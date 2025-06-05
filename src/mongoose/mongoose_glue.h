@@ -85,11 +85,8 @@ void glue_get_leds(struct leds *);
 void glue_set_leds(struct leds *);
 
 struct settings {
-  int log_level;
-  bool bool_val;
-  char string_val[20];
-  int level;
-  bool enableBla;
+  int gaugegain;
+  bool read;
   int maxspeed;
 };
 void glue_get_settings(struct settings *);
@@ -118,6 +115,12 @@ bool glue_ota_write_firmware_update(void *context, void *buf, size_t len);
 
 void glue_start_reboot(struct mg_str);  // Start an action
 bool glue_check_reboot(void);  // Check if action is still in progress
+
+struct read {
+  bool all;
+};
+void glue_get_read(struct read *);
+void glue_set_read(struct read *);
 
 
 #ifdef __cplusplus

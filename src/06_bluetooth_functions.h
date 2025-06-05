@@ -1,5 +1,4 @@
-#ifndef BLUETOOTH_FUNCTIONS_H
-#define BLUETOOTH_FUNCTIONS_H
+#pragma once
 
 #include <BLEDevice.h>
 #include <BLEServer.h>
@@ -12,4 +11,3 @@ void updateBLEData(int16_t humanPower, int16_t torqueValue, uint16_t speed, int1
 
 //void handleBLEConnections();
 
-#endif

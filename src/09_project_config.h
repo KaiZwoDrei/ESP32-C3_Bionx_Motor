@@ -1,6 +1,5 @@
 // project_config.h
-#ifndef PROJECT_CONFIG_H
-#define PROJECT_CONFIG_H
+#pragma once
 
 // FreeRTOS Core
 #include "freertos/FreeRTOS.h"
@@ -22,4 +21,4 @@
 #define STACK_SIZE_BUTTON   2048
 #define STACK_SIZE_DISPLAY  2048
 
-#endif
+

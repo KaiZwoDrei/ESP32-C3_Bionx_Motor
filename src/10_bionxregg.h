@@ -1,4 +1,4 @@
-
+#pragma once
 #define CanRX GPIO_NUM_19
 #define CanTX GPIO_NUM_13
 
@@ -143,3 +143,41 @@
 #define BXID_MOTOR            0x20
 #define BXR_MOTOR_LEVEL       0x09
 #define BXR_MOTOR_SWVERS      0x20  
+// battery 
+
+
+#define ID_BATTERY                  0x10
+
+#define ID_BATTERY_RESPONSE                                    0x08
+#define REG_BATTERY_CONFIG_ALLOW_BUCKCHARGING_ON_BIKE          0x12 //Specifies if the battery can recharge in buck mode even on a bike. Make sure it is IMPOSSIBLE to have an accessory output before setting this to 1. 0: Disallow, 1: Allow
+#define REG_BATTERY_STATUS_CHARGER_MANAGER_STATUS              0x13 //Gives state of charging Mef: 0-Off, 1-Stand-by, 2-Charger, 3-Accessory, 4-Vdcin sense, 5-Overtemp, 6-Charge done, 7-Buck failed
+#define REG_BATTERY_CONFIG_WAKE_ON_POWERVOLTAGE                0x14 //Specifies if the battery should wake up automatically when a voltage is present on the vPower. A value of 0 disables the feature
+
+#define REG_BATTERY_STATUS_FLAGS_HI                            0x1D //Alert status bits: 0-Vctrl (code 20), 1-Precharge (code 21 and 67), 2-Relay (code 22), 3-BMS (code 23), 4-DCDC (code 28), 6-GG out of range temperature, 7-battery pack out of range temperature, 8-balancer overvolt (code 62), 9-Balancer undervolt (code 61), 10-Pack problem (code 63), 11-Accessory overcurrent (code 60), 12-Electronic fuse (code 66), 13-Balancer plug not connected, 14- +5v short(lached)
+
+#define REG_BATTERY_STATUS_CELLPACK_CURRENT_HI                 0x1E //Reading battery current by a shunt resistor. No delay, no calibration compared to battery.gg.ai [unit:A, factor:0.001]
+#define REG_BATTERY_STATUS_CELLPACK_CURRENT_LO                 0x1F //!!! signed !!!
+#define REG_BATTERY_CONFIG_POWER_VOLTAGE_ENABLE                0x21 //- ??? Enable/Disable vPower ???
+#define REG_BATTERY_CONFIG_ACCESSORY_ENABLED                   0x22 //-
+#define REG_BATTERY_CONFIG_SHUTDOWN                            0x25 //write 1 to shutdwon system
+#define REG_BATTERY_CONFIG_CONTROL_VOLTAGE_ENABLE              0x26 //Enable/Disable vControl
+#define REG_BATTERY_STATUS_ESTIMATED_SOC                       0x30 //Return an estimated value of SOC based on battery voltage. Only works with LiIon battery [unit:%]
+#define REG_BATTERY_STATUS_BATTERY_VOLTAGE_NORMALIZED          0x32 //Battery voltage normalized with 3.7V/cell. status.vBattInternal it used in Rev 104 and less otherwise status.vBatt [unit:V, factor:0.416667, offset:20.8333]
+#define REG_BATTERY_STATISTIC_BATTERY_AVGVOLTAGE_NORMALIZED    0x33 //Average battery voltage read during 50s based on battery.status.vBatt, in percentage of its nominal voltage [unit:V, factor:0.416667, offset:20.8333]
+#define REG_BATTERY_STATUS_INTERNAL_BATTERY_VOLTAGE_HI         0x4A //Reading of vBattInternal [unit:V, factor:0.001]
+#define REG_BATTERY_STATUS_INTERNAL_BATTERY_VOLTAGE_LO         0x4B
+#define REG_BATTERY_STATUS_CONSOLE_VOLTAGE_HI                  0x4C //Reading of vConsole (voltage applied to console) [unit:V, factor:0.001]
+#define REG_BATTERY_STATUS_CONSOLE_VOLTAGE_LO                  0x4D
+
+#define REG_BATTERY_STATUS_12V_VOLTAGE_HI                      0x4E //Reading of internal 12V [unit:V, factor:0.001]
+#define REG_BATTERY_STATUS_12V_VOLTAGE_LO                      0x4F
+
+#define REG_BATTERY_STATUS_BATTERY_VOLTAGE_HI                  0xA6 //Reading of vBatt. Return same value as vCell13 [unit:V, factor:0.001]
+#define REG_BATTERY_STATUS_BATTERY_VOLTAGE_LO                  0xA7
+
+#define REG_BATTERY_STATUS_POWER_VOLTAGE_HI                    0xAA //Reading of vPower ("High" voltage applied to motor) [unit:V, factor:0.001]
+#define REG_BATTERY_STATUS_POWER_VOLTAGE_LO                    0xAB
+
+#define REG_CELLMON_CELL_VOLTAGE_1                             0x81 //[unit:V, factor:0.001]
+  //...                                                      //!!! signed !!!
+#define REG_CELLMON_CELL_VOLTAGE_13                            0x8D //[unit:V, factor:0.001]

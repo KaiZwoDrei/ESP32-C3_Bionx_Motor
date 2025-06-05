@@ -1,5 +1,4 @@
-#ifndef BIONX_MOTOR_H
-#define BIONX_MOTOR_H
+#pragma once
 #include <Arduino.h>
 
 
@@ -47,7 +46,6 @@ extern uint32_t motorVoltage;
 extern int32_t gauge;
 
 
-#endif
 
 
 

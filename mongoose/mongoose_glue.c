@@ -13,7 +13,7 @@ void glue_set_leds(struct leds *data) {
   s_leds = *data; // Sync with your device
 }
 
-static struct settings s_settings = {3, false, 42, 42, false, 10};
+static struct settings s_settings = {42, false, 10};
 void glue_get_settings(struct settings *data) {
   *data = s_settings;  // Sync with your device
 }
@@ -55,4 +55,12 @@ bool glue_check_reboot(void) {
 void glue_start_reboot(struct mg_str params) {
   MG_DEBUG(("Passed parameters: [%.*s]", params.len, params.buf));
   s_action_timeout_reboot = mg_now() + 1000; // Start reboot, finish after 1 second
+}
+
+static struct read s_read = {false};
+void glue_get_read(struct read *data) {
+  *data = s_read;  // Sync with your device
+}
+void glue_set_read(struct read *data) {
+  s_read = *data; // Sync with your device
 }
