@@ -46,7 +46,7 @@ void setup() {
     Serial.println(WiFi.localIP());
       // Initialize Mongoose
     mongoose_init();
-    //mg_log_set(MG_LL_ERROR); 
+    mg_log_set(MG_LL_ERROR); 
     // Create Mongoose FreeRTOS task
 
 

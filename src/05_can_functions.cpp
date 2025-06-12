@@ -2,7 +2,9 @@
 #include <esp32_can.h>
 
 void setupCAN() {
-    CAN0.setCANPins(GPIO_NUM_19, GPIO_NUM_13);
+    CAN0.setCANPins(GPIO_NUM_0, GPIO_NUM_1); // für supermicro
+//    CAN0.setCANPins(GPIO_NUM_19, GPIO_NUM_13);  für luatos esp32c3 
+
     CAN0.begin(125000);
 }
 

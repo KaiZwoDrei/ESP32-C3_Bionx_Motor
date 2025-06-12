@@ -64,7 +64,7 @@ void handleOTA() {
 void mongooseTask(void *pvParameters) {
     while (1) {   
     mongoose_poll();
-      vTaskDelay(pdMS_TO_TICKS(10)); // Call every 30 msfor(;;) {
+      vTaskDelay(pdMS_TO_TICKS(30)); // Call every 30 msfor(;;) {
     }
   }  
 

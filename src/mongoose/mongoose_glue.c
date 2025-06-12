@@ -56,14 +56,19 @@ if (readglue) {
   //readBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_MAXSPEED, &temp2);
   data->gaugegain=(int)temp1;
   data->maxspeed=(int)temp2;
+  readglue=false; // Reset flag after reading
+}
+else {
+  data->gaugegain=(int)temp1;
+  data->maxspeed=(int)temp2;
  // readglue=false;
  // data->read = false; // Reset, damit nicht nochmal gelesen wird
 }
 }
 void glue_set_settings(struct settings *data) {
   temp2=data->maxspeed;
-  writeBionxRegister(BXID_MOTOR, REG_MOTOR_TORQUE_GAUGE_GAIN, data->gaugegain);
-  writeBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_MAXSPEED, data->maxspeed);
+ // writeBionxRegister(BXID_MOTOR, REG_MOTOR_TORQUE_GAUGE_GAIN, data->gaugegain);
+ // writeBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_MAXSPEED, data->maxspeed);
 }
 
 static struct state s_state={"1.0.2",100,235,300,25};  // Initial version, update as needed

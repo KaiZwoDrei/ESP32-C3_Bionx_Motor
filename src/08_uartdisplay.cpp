@@ -9,8 +9,11 @@
 // Lokale Variablen
 #define UART_NUM 1
 
-#define TXD_PIN 0  // Assuming GPIO1 is your RX_PIN
-#define RXD_PIN 1
+//#define TXD_PIN 0  // Luatos ESP32-C3
+//#define RXD_PIN 1
+#define TXD_PIN 20  // ESP32-C3 Supermicro
+#define RXD_PIN 21  // ESP32-C3 Supermicro
+
 #define UART_BAUD_RATE 115200
 #define UART_QUEUE_SIZE 10
 #define UART_RX_BUF_SIZE 1024
@@ -167,7 +170,7 @@ int16_t handleButton(int16_t& assistLevel, bool& light) {
 }
 void updateDisplay(int8_t assistLevel,int8_t rekupLevel, uint8_t motorSpeed, uint8_t motorStatus, uint8_t batteryLevel, uint8_t motorlevel) {
     // Header
-    uart_set_pin(UART_NUM,RX_PIN ,UART_PIN_NO_CHANGE , UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    uart_set_pin(UART_NUM,RXD_PIN ,UART_PIN_NO_CHANGE , UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
       uart_disable_rx_intr(UART_NUM);
       uart_set_rts(UART_NUM, 0);
 int8_t segmentdisp;
@@ -215,7 +218,7 @@ error=1;
 }
 
 int16_t readUART() {
-    uart_set_pin(UART_NUM, UART_PIN_NO_CHANGE, RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    uart_set_pin(UART_NUM, UART_PIN_NO_CHANGE, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     // Set RTS pin to enable receiving
     uart_set_rts(UART_NUM, 1);
 // Re-enable UART interrupts

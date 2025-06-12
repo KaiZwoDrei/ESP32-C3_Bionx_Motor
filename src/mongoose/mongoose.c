@@ -2028,13 +2028,11 @@ void mg_http_serve_file(struct mg_connection *c, struct mg_http_message *hm,
     // If a browser sends us "Accept-Encoding: gzip", try to open .gz first
     struct mg_str *ae = mg_http_get_header(hm, "Accept-Encoding");
     if (ae != NULL) {
-      char *ae_ = mg_mprintf("%.*s", ae->len, ae->buf);
-      if (ae_ != NULL && strstr(ae_, "gzip") != NULL) {
+      if (mg_match(*ae, mg_str("*gzip*"), NULL)) {
         mg_snprintf(tmp, sizeof(tmp), "%s.gz", path);
         fd = mg_fs_open(fs, tmp, MG_FS_READ);
         if (fd != NULL) gzip = true, path = tmp;
       }
-      free(ae_);
     }
     // No luck opening .gz? Open what we've told to open
     if (fd == NULL) fd = mg_fs_open(fs, path, MG_FS_READ);
@@ -5378,8 +5376,8 @@ void mg_mgr_poll(struct mg_mgr *mgr, int ms) {
   for (c = mgr->conns; c != NULL; c = tmp) {
     tmp = c->next;
     struct connstate *s = (struct connstate *) (c + 1);
-    bool is_tls = !c->is_resolving && !c->is_arplooking && !c->is_listening &&
-                  !c->is_connecting;
+    bool is_tls = c->is_tls && !c->is_resolving && !c->is_arplooking &&
+                  !c->is_listening && !c->is_connecting;
     mg_call(c, MG_EV_POLL, &now);
     MG_VERBOSE(("%lu .. %c%c%c%c%c %lu %lu", c->id, c->is_tls ? 'T' : 't',
                 c->is_connecting ? 'C' : 'c', c->is_tls_hs ? 'H' : 'h',
@@ -5389,7 +5387,7 @@ void mg_mgr_poll(struct mg_mgr *mgr, int ms) {
     if (is_tls && (c->rtls.len > 0 || mg_tls_pending(c) > 0))
       handle_tls_recv(c);
     if (can_write(c)) write_conn(c);
-    if (is_tls && c->tls && c->send.len == 0) mg_tls_flush(c);
+    if (is_tls && c->send.len == 0) mg_tls_flush(c);
     if (c->is_draining && c->send.len == 0 && s->ttype != MIP_TTYPE_FIN)
       init_closure(c);
     // For non-TLS, close immediately upon completing the 3-way closure
@@ -9216,11 +9214,11 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
     if (c->is_closing) tvp = &tv_zero;
   }
 
-  if ((rc = select((int) maxfd + 1, &rset, &wset, &eset, tvp)) < 0) {
+  if ((rc = select((int) maxfd + 1, &rset, &wset, &eset, tvp)) <= 0) {
 #if MG_ARCH == MG_ARCH_WIN32
     if (maxfd == 0) Sleep(ms);  // On Windows, select fails if no sockets
 #else
-    MG_ERROR(("select: %d %d", rc, MG_SOCK_ERR(rc)));
+    if (rc < 0) MG_ERROR(("select: %d %d", rc, MG_SOCK_ERR(rc)));
 #endif
     FD_ZERO(&rset);
     FD_ZERO(&wset);
@@ -9229,7 +9227,12 @@ static void mg_iotest(struct mg_mgr *mgr, int ms) {
 
   for (c = mgr->conns; c != NULL; c = c->next) {
     if (FD(c) != MG_INVALID_SOCKET && FD_ISSET(FD(c), &eset)) {
+#if MG_ARCH == MG_ARCH_THREADX
+      // NextDuo stack returns exceptions for listening connection after accept
+      if (c->is_listening == 0) mg_error(c, "socket error");
+#else
       mg_error(c, "socket error");
+#endif
     } else {
       c->is_readable = FD(c) != MG_INVALID_SOCKET && FD_ISSET(FD(c), &rset);
       c->is_writable = FD(c) != MG_INVALID_SOCKET && FD_ISSET(FD(c), &wset);
@@ -14194,6 +14197,7 @@ long mg_tls_send(struct mg_connection *c, const void *buf, size_t len) {
 }
 
 void mg_tls_flush(struct mg_connection *c) {
+  struct mg_tls *tls = (struct mg_tls *) c->tls;
   if (c->is_tls_throttled) {
     long n = mbedtls_ssl_write(&tls->ssl, tls->throttled_buf, tls->throttled_len);
     c->is_tls_throttled = (n == MBEDTLS_ERR_SSL_WANT_READ || n == MBEDTLS_ERR_SSL_WANT_WRITE);
@@ -14339,6 +14343,7 @@ static void ssl_keylog_cb(const SSL *ssl, const char *line) {
   fprintf(f, "%s\n", line);
   fflush(f);
   fclose(f);
+  (void) ssl;
 }
 #endif
 

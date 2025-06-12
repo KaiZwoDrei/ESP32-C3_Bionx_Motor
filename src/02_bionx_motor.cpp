@@ -184,8 +184,8 @@ void statusTask(void *parameter) {
         //updateBLEData(currentMotorPower, rawTorque, motorPower, motorSpeed, calculateBatteryLevel());
         
         // Debug-Ausgabe
-        Serial.printf("Speed: %d | Level: %d | Rekup %d | Power: %dW | Torque: %d | Motorlevel: %d \n",
-                      motorSpeed, assistLevel, rekupLevel ,currentMotorPower, rawTorque, motorlevel);
+        //Serial.printf("Speed: %d | Level: %d | Rekup %d | Power: %dW | Torque: %d | Motorlevel: %d \n",
+        //              motorSpeed, assistLevel, rekupLevel ,currentMotorPower, rawTorque, motorlevel);
         
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
