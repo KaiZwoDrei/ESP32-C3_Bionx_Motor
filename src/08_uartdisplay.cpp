@@ -11,8 +11,9 @@
 
 //#define TXD_PIN 0  // Luatos ESP32-C3
 //#define RXD_PIN 1
-#define TXD_PIN 20  // ESP32-C3 Supermicro
-#define RXD_PIN 21  // ESP32-C3 Supermicro
+#define Button_PIN  4
+#define TXD_PIN 9  // ESP32-C3 Supermicro
+#define RXD_PIN 10  // ESP32-C3 Supermicro
 
 #define UART_BAUD_RATE 115200
 #define UART_QUEUE_SIZE 10

@@ -56,7 +56,11 @@ void setupBionx() {
         }
         delay(200);
     }
-
+    writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_POWER_VOLTAGE_ENABLE , 0x01); // Aktiviere Spannung   
+    writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_CONTROL_VOLTAGE_ENABLE , 0x01); // Aktiviere Spannung  
+    writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_ACCESSORY_ENABLED , 0x01); // Aktiviere Spannung Licht
+    writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_BATTINT_VOLTAGE_ENABLE, 0x01); // vBattInt
+    
     
     Serial.print("Found motor with software version: ");
     Serial.println(softwareVersion);
@@ -136,17 +140,25 @@ void buttonTask(void *parameter) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
+void keepAliveTask(void *parameter) {
+    TickType_t xLastWakeTime = xTaskGetTickCount();
+    const TickType_t xFrequency = pdMS_TO_TICKS(5000); // 5000 ms = 5 Sekunden
 
+    while(1) {
+        writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_SHUTDOWN, 0x00);
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+    }
+}
 // Task für Geschwindigkeit & Display (20Hz)
 void speedTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(300); // 50ms = 20Hz
+    const TickType_t xFrequency = pdMS_TO_TICKS(150); // 50ms = 20Hz
     
     while(1) {
         // Lese Motordaten
         readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_SPEED, &motorSpeed);
         //xQueueOverwrite(speedQueue, &motorSpeed);
-        rekupLevel = readUART();
+        //rekupLevel = readUART(); //nur bei angeschlossenem throttle oder brake 
 
         //if(xQueueReceive(speedQueue, &speed, 0))
         //{

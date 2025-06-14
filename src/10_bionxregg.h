@@ -161,6 +161,7 @@
 #define REG_BATTERY_CONFIG_ACCESSORY_ENABLED                   0x22 //-
 #define REG_BATTERY_CONFIG_SHUTDOWN                            0x25 //write 1 to shutdwon system
 #define REG_BATTERY_CONFIG_CONTROL_VOLTAGE_ENABLE              0x26 //Enable/Disable vControl
+#define REG_BATTERY_CONFIG_BATTINT_VOLTAGE_ENABLE              0x45 //Enable/Disable vBattInt
 #define REG_BATTERY_STATUS_ESTIMATED_SOC                       0x30 //Return an estimated value of SOC based on battery voltage. Only works with LiIon battery [unit:%]
 #define REG_BATTERY_STATUS_BATTERY_VOLTAGE_NORMALIZED          0x32 //Battery voltage normalized with 3.7V/cell. status.vBattInternal it used in Rev 104 and less otherwise status.vBatt [unit:V, factor:0.416667, offset:20.8333]
 #define REG_BATTERY_STATISTIC_BATTERY_AVGVOLTAGE_NORMALIZED    0x33 //Average battery voltage read during 50s based on battery.status.vBatt, in percentage of its nominal voltage [unit:V, factor:0.416667, offset:20.8333]
@@ -181,3 +182,7 @@
 #define REG_CELLMON_CELL_VOLTAGE_1                             0x81 //[unit:V, factor:0.001]
   //...                                                      //!!! signed !!!
 #define REG_CELLMON_CELL_VOLTAGE_13                            0x8D //[unit:V, factor:0.001]
+
+#define REG_BATTERY_PROTECT_UNLOCK                             0x71
+#define BATTERY_PROTECT_LOCK_KEY                               0x00
+#define BATTERY_PROTECT_UNLOCK_KEY                             0xAA

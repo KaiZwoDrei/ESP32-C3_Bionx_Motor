@@ -18,6 +18,8 @@ void torqueTask(void *parameter);
 void statusTask(void *parameter);
 void buttonTask(void *parameter);
 void speedTask(void *parameter);
+void keepAliveTask(void *parameter);
+
 void printTaskStats() ;
 
 // Puffer-Größe

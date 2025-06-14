@@ -2,8 +2,6 @@
 
 #include <Arduino.h>
 
-// Pin Definitionen
-const uint8_t Button_PIN = 4;
 
 
 // Button state struct for RTOS-safe handling

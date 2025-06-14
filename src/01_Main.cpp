@@ -1,6 +1,5 @@
 
 //#include "06_bluetooth_functions.h"
-#include "07_OTA.h"
 #include "02_bionx_motor.h"
 #include "05_can_functions.h"
 #include "08_uartdisplay.h"
@@ -17,6 +16,7 @@ extern int16_t assistLevel;
 extern uint16_t motorSpeed;
 extern uint16_t motorPower;
 
+#define WIFI_ENABLE 0
 
 // Globale Task Handles
 TaskHandle_t torqueTaskHandle = NULL;
@@ -25,12 +25,19 @@ SemaphoreHandle_t uartSemaphore;
 EventGroupHandle_t taskEventGroup;
 
 
+void mongooseTask(void *pvParameters) {
+  while (1) {   
+  mongoose_poll();
+    vTaskDelay(pdMS_TO_TICKS(30)); // Call every 30 msfor(;;) {
+  }
+}  
 
 
 void setup() {
     Serial.begin(115200);
     
-    // Initialize WiFiManager
+   if(WIFI_ENABLE) // Initialize WiFiManager
+   {
     WiFiManager wm;
     wm.setHostname("BionX-Controller"); // Set device hostname
     
@@ -51,7 +58,15 @@ void setup() {
 
 
     Serial.println("Mongoose dashboard started on port 80");
+  }
+    else
+    {
+        Serial.println("WiFiManager not enabled, running without WiFi");
+    }
+    // Create Mongoose FreeRTOS task
+    //xTaskCreatePinnedToCore(mongooseTask, "Mongoose", TASK_STACK_SIZE*4, NULL, 4, NULL, 1);
 
+    // Initialize other components
   //  setupOTA("bionx-controller");
     setupCAN();
     setupBionx();
@@ -71,6 +86,15 @@ void setup() {
         NULL,
         0
     );
+    xTaskCreatePinnedToCore(
+      keepAliveTask,
+      "KeepAlive",
+      TASK_STACK_SIZE,
+      NULL,
+      TASK_PRIO_TORQUE,
+      NULL,
+      0
+  );
 
     xTaskCreatePinnedToCore(
         statusTask,
@@ -100,6 +124,8 @@ void setup() {
         NULL,
         0
     );
+    if(WIFI_ENABLE) 
+    {
     xTaskCreatePinnedToCore(
       mongooseTask,
       "Mongoose",
@@ -109,6 +135,7 @@ void setup() {
       NULL,
       1            // Core 1
     );
+    }
 }
 
 
