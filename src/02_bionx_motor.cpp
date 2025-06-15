@@ -56,10 +56,10 @@ void setupBionx() {
         }
         delay(200);
     }
-    writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_POWER_VOLTAGE_ENABLE , 0x01); // Aktiviere Spannung   
-    writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_CONTROL_VOLTAGE_ENABLE , 0x01); // Aktiviere Spannung  
-    writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_ACCESSORY_ENABLED , 0x01); // Aktiviere Spannung Licht
-    writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_BATTINT_VOLTAGE_ENABLE, 0x01); // vBattInt
+       
+    //writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_CONTROL_VOLTAGE_ENABLE , 0x01); // Aktiviere Spannung  
+    //writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_ACCESSORY_ENABLED , 0x01); // Aktiviere Spannung Licht
+    //writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_BATTINT_VOLTAGE_ENABLE, 0x01); // vBattInt
     
     
     Serial.print("Found motor with software version: ");
@@ -81,30 +81,32 @@ void setupBionx() {
 
 // Funktion zur Berechnung des Batterieladestands
 uint8_t calculateBatteryLevel() {
-    // Konstanten für 13S LG MJ1 Akku
-    const uint32_t VOLTAGE_MIN = 39000;    // 39.0V in mV
-    const uint32_t VOLTAGE_MAX = 54600;    // 54.6V in mV
-    const uint32_t VOLTAGE_NOMINAL = 48100; // 48.1V in mV
-    
-    if (motorVoltage >= VOLTAGE_MAX) return 100;
-    if (motorVoltage <= VOLTAGE_MIN) return 0;
-    
-    // Nicht-lineare Berechnung mit Integer-Arithmetik
-    if (motorVoltage > VOLTAGE_NOMINAL) {
-        // Oberer Bereich (exponentiell)
-        uint32_t temp = ((motorVoltage - VOLTAGE_NOMINAL) * 15LL * 65536) / (VOLTAGE_MAX - VOLTAGE_NOMINAL);
-        return 85 + (temp >> 16);
+    if (motorVoltage >= BATTERY_VOLTAGE_MAX) return 100;
+    if (motorVoltage <= BATTERY_VOLTAGE_MIN) return 0;
+
+    uint8_t soc = 0;
+    if (motorVoltage > BATTERY_VOLTAGE_NOM) {
+        // Upper range (non-linear, "exponential" approximation)
+        int32_t diff = (int32_t)motorVoltage - (int32_t)BATTERY_VOLTAGE_NOM;
+        uint32_t temp = ((int64_t)diff * BATTERY_INV_UPPER_RANGE) >> 24;
+        soc = 85 + temp;
     } else {
-        // Unterer Bereich (linear)
-        uint32_t temp = ((motorVoltage - VOLTAGE_MIN) * 85LL * 65536) / (VOLTAGE_NOMINAL - VOLTAGE_MIN);
-        return (temp >> 16);
+        // Lower range (linear)
+        int32_t diff = (int32_t)motorVoltage - (int32_t)BATTERY_VOLTAGE_MIN;
+        uint32_t temp = ((int64_t)diff * BATTERY_INV_LOWER_RANGE) >> 24;
+        soc = temp;
     }
+
+    // Clamp to [0, 100]
+    if (soc > 100) soc = 100;
+    return soc;
 }
+
 
 // Task für Drehmomentmessung (500Hz)
 void torqueTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(10); // 2ms = 500Hz
+    const TickType_t xFrequency = pdMS_TO_TICKS(5); // 10ms = 100Hz
     int writeCounter = 0;
     while(1) {
         if (rekupLevel > 0) {
@@ -128,7 +130,7 @@ void torqueTask(void *parameter) {
 // Task für Button-Handling (100Hz)
 void buttonTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(30); // 10ms = 100Hz
+    const TickType_t xFrequency = pdMS_TO_TICKS(30); // 30ms = 30Hz
     
     while(1) {
         uint16_t speed;
@@ -152,7 +154,7 @@ void keepAliveTask(void *parameter) {
 // Task für Geschwindigkeit & Display (20Hz)
 void speedTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(150); // 50ms = 20Hz
+    const TickType_t xFrequency = pdMS_TO_TICKS(150); // 150ms = 6Hz
     
     while(1) {
         // Lese Motordaten
@@ -170,17 +172,18 @@ void speedTask(void *parameter) {
 
 
 
-// Task für Statusaktualisierung und BLE-Kommunikation (10Hz)
+// Task für Statusaktualisierung und BLE-Kommunikation (2Hz)
 void statusTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(500); // 100ms = 10Hz
+    const TickType_t xFrequency = pdMS_TO_TICKS(500); // 500ms = 2Hz
     
     while(1) {
-
         readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_METER, &motorPower);
-        
+        writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_POWER_VOLTAGE_ENABLE , 0x01); // Aktiviere Spannung
         // Lese Motorspannung
-        uint16_t voltageHigh, voltageLow;
+        uint16_t voltageHigh, voltageLow, motorStatus;
+        readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_MAIN, &motorStatus);
+    
         readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_VOLTAGE_HI, &voltageHigh);
         readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_VOLTAGE_LO, &voltageLow);
         motorVoltage = (voltageHigh << 8) | voltageLow;
@@ -196,91 +199,62 @@ void statusTask(void *parameter) {
         //updateBLEData(currentMotorPower, rawTorque, motorPower, motorSpeed, calculateBatteryLevel());
         
         // Debug-Ausgabe
-        //Serial.printf("Speed: %d | Level: %d | Rekup %d | Power: %dW | Torque: %d | Motorlevel: %d \n",
-        //              motorSpeed, assistLevel, rekupLevel ,currentMotorPower, rawTorque, motorlevel);
+        Serial.printf("Speed: %d | Level: %d | Rekup %d | Power: %dW | Torque: %d | Motorlevel: %d | Motor Status: %d\n",
+                      motorSpeed, assistLevel, rekupLevel ,currentMotorPower, rawTorque, motorlevel, motorStatus);
         
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
-
-// Funktion zur Verarbeitung des Drehmoments
 uint16_t processTorque(uint16_t rawTorque) {
-    TickType_t currentTime = xTaskGetTickCount();
-    static int32_t lastTorque = 0;
-    static TickType_t lastPeakTime = 0;
+    static int32_t filtered_torque = 0;  // Q16-Format (16:16)
+    const TickType_t currentTime = xTaskGetTickCount();
     static TickType_t lastWriteTime = 0;
+    static int32_t lastTorque = 0;
     static uint16_t lastWrittenLevel = 0;
-    const TickType_t WRITE_INTERVAL = pdMS_TO_TICKS(50); // Minimum time between writes
-    const TickType_t PEAK_INTERVAL_TICKS = pdMS_TO_TICKS(PEAK_INTERVAL);
+    const TickType_t WRITE_INTERVAL = pdMS_TO_TICKS(50); // Minimum time
+    const TickType_t DECAY_INTERVAL = pdMS_TO_TICKS(100); // Minimum time
+    // 1. Fixed-Point-Konversion (12:4 Format)
+    int32_t torque = (int32_t)rawTorque * TORQUE_FACTOR >> 16;  // 12 Bit ADC → 16:16
     
-    // Umrechnung in Festkomma
-    int32_t torque = ((int32_t)rawTorque * TORQUE_FACTOR) >> 16;
+    if(torque >= TORQUE_THRESHOLD) {
+     
+    // 2. IIR-Filter: y[n] = 0.25*x[n] + 0.75*y[n-1]
+    filtered_torque = ((torque * IIR_ALPHA) >> 16) + 
+                     ((filtered_torque * IIR_1MALPHA) >> 16);
     
-    bool isPeak = (torque > TORQUE_THRESHOLD && lastTorque <= TORQUE_THRESHOLD);
+
+    // 4. Skaliere auf 0-100% (8:24 → 0-100)
+    int32_t gauge = (filtered_torque * assistLevel)*INV_100 >> 24; // 8:24 Festkomma-Format
+    gauge = (gauge > 100) ? 100 : gauge;
     
-    if (torque > TORQUE_THRESHOLD) {
-        // Aktualisiere Drehmomentpuffer
-        torqueBuffer[bufferIndex].value = torque;
-        torqueBuffer[bufferIndex].timestamp = currentTime;
-        torqueBuffer[bufferIndex].isPeak = isPeak;
-        
-        if (isPeak) {
-            lastPeakTime = currentTime;
-        }
-        
-        bufferIndex = (bufferIndex + 1) % CURVE_BUFFER_SIZE;
-        
-        // Berechne Durchschnittswerte
-        int32_t peakSum = 0;
-        int32_t curveSum = 0;
-        int peakCount = 0;
-        int validSamples = 0;
-        
-        for (int i = 0; i < CURVE_BUFFER_SIZE; i++) {
-            if ((currentTime - torqueBuffer[i].timestamp) < (PEAK_INTERVAL_TICKS + pdMS_TO_TICKS(2))) {
-                if (torqueBuffer[i].isPeak) {
-                    peakSum += torqueBuffer[i].value;
-                    peakCount++;
-                }
-                curveSum += torqueBuffer[i].value;
-                validSamples++;
-            }
-        }
-        
-        if (validSamples > 0) {
-            int32_t peakAvg = peakCount > 0 ? ((peakSum * 65536) / peakCount) >> 16 : 0;
-            int32_t curveAvg = ((curveSum * 65536) / validSamples) >> 16;
-            
-            // Gewichtete Summe mit Ganzzahlen
-            int32_t combinedTorque = ((peakAvg * PEAK_WEIGHT) >> 16) +
-                                     ((curveAvg * CURVE_WEIGHT) >> 16);
-            
-            gauge = ((((gauge*90) + (combinedTorque*10))*65536)/100) >> 16;
-            
-            if (motorSpeed >= 0 && motorSpeed < 50) {
-                level = ((gauge * assistLevel*65536)/ 100) >> 16;
-                if (level > 100) level = 100;
-                if ((level > 0) && ((currentTime - lastWriteTime) >= WRITE_INTERVAL)) {
-                    writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, level);
-                    lastWrittenLevel = level;
-                    lastWriteTime = currentTime;
-                //    Serial.println("sent");
-                }
-            }
-        }
+    // 5. Motor-Update mit Assist
+    level = gauge  ;
+    if ((currentTime - lastWriteTime) >= WRITE_INTERVAL) {
+        writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, level);
+        lastWrittenLevel = level;
+        lastWriteTime = currentTime;
     }
+
     
-    if ((currentTime - lastPeakTime) > PEAK_INTERVAL_TICKS) {
-        gauge = (gauge * GAUGE_DECAY) >> 16;
-        if (gauge < 100 && lastWrittenLevel != 0) { // 1.0 in Festkomma
-            writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, 0);
-            lastWrittenLevel = 0;
-            level = lastWrittenLevel;
-            lastWriteTime = currentTime;
+    }   
+    if(torque < TORQUE_THRESHOLD)
+    {
+    const int32_t decay_shift = (filtered_torque > 30) ? 1 : 2; // 1/16 oder 1/4 pro Sekunde
+    // Füge einen minimalen Decay von 1 hinzu, wenn filtered_torque > 0
+    
+    if (((currentTime - lastWriteTime) > DECAY_INTERVAL)  && lastWrittenLevel != 0) {
+        if (filtered_torque > 0) {
+        int32_t decay = (filtered_torque >> decay_shift);
+        decay = (decay == 0) ? 1 : decay; // Mindestens 1
+        filtered_torque -= decay;
         }
+        int32_t gauge = (filtered_torque * assistLevel)*INV_100 >> 24; // 8:24 Festkomma-Format
+        level=gauge;
+        writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, level);
+        lastWrittenLevel = level;
+        lastWriteTime = currentTime;
     }
-    
+    }
     lastTorque = torque;
     return level;
 }
-

@@ -23,10 +23,10 @@
 extern ButtonState button;
 extern bool light;
 // Define modes as constants
-const int8_t MODE_OFF = 0;
-const int8_t MODE_ECO = 33;
-const int8_t MODE_DRIVE = 66;
-const int8_t MODE_SPORT = 100;
+const int16_t MODE_OFF = 0;
+const int16_t MODE_ECO = 50;
+const int16_t MODE_DRIVE = 100;
+const int16_t MODE_SPORT = 150;
 
 uint8_t tx_frame[14];
 uint8_t uart_buf[8];
@@ -34,7 +34,7 @@ uint16_t throttle_value = 0;
 uint16_t brake_value = 0;
 
 QueueHandle_t uart_queue;
-uint8_t getModeDisplay(int8_t assistLevel, int8_t recuplevel) 
+uint8_t getModeDisplay(int16_t assistLevel, int8_t recuplevel) 
     {
    // if (assistLevel <0) return 128+2; 
     if (assistLevel == -MODE_ECO) return 128+2;       // ECO symbol
@@ -148,8 +148,8 @@ int16_t handleButton(int16_t& assistLevel, bool& light) {
                 case MODE_DRIVE: assistLevel = MODE_SPORT; break;
                 case MODE_SPORT: assistLevel = MODE_ECO; break;
                 case -MODE_ECO:   assistLevel = -MODE_DRIVE; break;
-                case -MODE_DRIVE: assistLevel = -MODE_SPORT; break;
-                case -MODE_SPORT: assistLevel = -MODE_ECO; break;
+                case -MODE_DRIVE: assistLevel = -MODE_ECO; break;
+               // case -MODE_SPORT: assistLevel = -MODE_ECO; break;
 
                 default:         assistLevel = MODE_OFF; break;
                                     }
@@ -169,7 +169,7 @@ int16_t handleButton(int16_t& assistLevel, bool& light) {
     button.lastState = currentReading;
     return assistLevel;
 }
-void updateDisplay(int8_t assistLevel,int8_t rekupLevel, uint8_t motorSpeed, uint8_t motorStatus, uint8_t batteryLevel, uint8_t motorlevel) {
+void updateDisplay(int16_t assistLevel,int8_t rekupLevel, uint8_t motorSpeed, uint8_t motorStatus, uint8_t batteryLevel, uint8_t motorlevel) {
     // Header
     uart_set_pin(UART_NUM,RXD_PIN ,UART_PIN_NO_CHANGE , UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
       uart_disable_rx_intr(UART_NUM);

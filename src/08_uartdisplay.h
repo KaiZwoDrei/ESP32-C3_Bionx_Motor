@@ -21,8 +21,8 @@ struct ButtonState {
 // Funktionsdeklarationen
 void setupDisplay();
 int16_t handleButton(int16_t& assistLevel, bool& light);
-void updateDisplay(int8_t assistLevel,int8_t rekupLevel, uint8_t motorSpeed, uint8_t motorStatus, uint8_t batteryLevel,uint8_t motorlevel);
-uint8_t getModeDisplay(int8_t assistLevel, int8_t recuplevel);
+void updateDisplay(int16_t assistLevel,int8_t rekupLevel, uint8_t motorSpeed, uint8_t motorStatus, uint8_t batteryLevel,uint8_t motorlevel);
+uint8_t getModeDisplay(int16_t assistLevel, int8_t recuplevel);
 int16_t readUART();
 void uart_event_task(void *parameter);
 
