@@ -29,7 +29,7 @@ uint16_t maxMotorCurrent = 0;
 uint16_t currentMotorPower = 0;
 
 
-extern SemaphoreHandle_t uartSemaphore;
+SemaphoreHandle_t canMutex= NULL;
 extern EventGroupHandle_t taskEventGroup;
 
 
@@ -45,7 +45,8 @@ QueueHandle_t statusQueue;
 // Funktion zur Initialisierung des Bionx-Systems
 void setupBionx() {
     uint16_t softwareVersion;
-    
+   // canMutex = xSemaphoreCreateMutex();
+
     // Warte auf erfolgreiche Verbindung zum Motor
     for(int i=0; i<=10;i++) 
     {
@@ -58,7 +59,7 @@ void setupBionx() {
     }
        
     //writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_CONTROL_VOLTAGE_ENABLE , 0x01); // Aktiviere Spannung  
-    //writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_ACCESSORY_ENABLED , 0x01); // Aktiviere Spannung Licht
+    writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_ACCESSORY_ENABLED , 0x01); // Aktiviere Spannung Licht
     //writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_BATTINT_VOLTAGE_ENABLE, 0x01); // vBattInt
     
     
@@ -106,27 +107,47 @@ uint8_t calculateBatteryLevel() {
 // Task für Drehmomentmessung (500Hz)
 void torqueTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(5); // 10ms = 100Hz
-    int writeCounter = 0;
-    while(1) {
-        if (rekupLevel > 0) {
-            writeCounter++;
-            if (writeCounter >= 10) {
-                writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, -rekupLevel*100/150);
-                writeCounter = 0;
-            }
-        } else {
-            writeCounter = 0;
+    const TickType_t xFrequency = pdMS_TO_TICKS(2); // 10ms = 100Hz
+    static TickType_t lastWriteTime = 0;
+    static TickType_t lastAliveTime = 0;
+    //static int16_t motorlevel = 0;
+    static int16_t lastwrittenLevel = 0;
+    while(1) {                        
         uint16_t rawTorque;
         if(readBionxRegister(BXID_MOTOR, REG_MOTOR_TORQUE_GAUGE_VALUE, &rawTorque)) {
             xQueueOverwrite(torqueQueue, &rawTorque);
-            motorlevel = processTorque(rawTorque);
+                motorlevel = processTorque(rawTorque);
         }
-    }
+    
+            // Enforce 50ms write interval
+        //TickType_t currentTime = xTaskGetTickCount();
+        if (xTaskGetTickCount()-lastAliveTime>=pdMS_TO_TICKS(400))
+        {writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_POWER_VOLTAGE_ENABLE , 0x01); // Aktiviere Spannung),
+            lastAliveTime = xTaskGetTickCount();
+        }
+        if ((xTaskGetTickCount() - lastWriteTime) >= pdMS_TO_TICKS(20)) {
+            if(motorSpeed >= MINSPEED && motorlevel > 0) {
+                writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, motorlevel);
+                lastWriteTime = xTaskGetTickCount();
+                Serial.printf("Motorlevel: %d\n", motorlevel);
+                lastwrittenLevel = motorlevel;
+            }
+            else if (motorlevel == 0 && lastwrittenLevel != 0) {
+                writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, 0);
+                lastWriteTime = xTaskGetTickCount();
+                lastwrittenLevel = motorlevel;
+                Serial.printf("Motorlevel: %d\n", motorlevel);
+            }
+            if (rekupLevel > 0) {
+                writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, -rekupLevel*100/150);
+                lastWriteTime = xTaskGetTickCount();
+                lastwrittenLevel = motorlevel;
+            }
+
     vTaskDelayUntil(&xLastWakeTime, xFrequency);
 }
 }
-
+}
 // Task für Button-Handling (100Hz)
 void buttonTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
@@ -144,10 +165,11 @@ void buttonTask(void *parameter) {
 }
 void keepAliveTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(5000); // 5000 ms = 5 Sekunden
+    const TickType_t xFrequency = pdMS_TO_TICKS(500); // 5000 ms = 5 Sekunden
 
     while(1) {
-        writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_SHUTDOWN, 0x00);
+        //writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_SHUTDOWN, 0x00);
+        
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
@@ -179,7 +201,7 @@ void statusTask(void *parameter) {
     
     while(1) {
         readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_POWER_METER, &motorPower);
-        writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_POWER_VOLTAGE_ENABLE , 0x01); // Aktiviere Spannung
+        
         // Lese Motorspannung
         uint16_t voltageHigh, voltageLow, motorStatus;
         readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_MAIN, &motorStatus);
@@ -199,62 +221,54 @@ void statusTask(void *parameter) {
         //updateBLEData(currentMotorPower, rawTorque, motorPower, motorSpeed, calculateBatteryLevel());
         
         // Debug-Ausgabe
-        Serial.printf("Speed: %d | Level: %d | Rekup %d | Power: %dW | Torque: %d | Motorlevel: %d | Motor Status: %d\n",
-                      motorSpeed, assistLevel, rekupLevel ,currentMotorPower, rawTorque, motorlevel, motorStatus);
+       // Serial.printf("Speed: %d | Level: %d | Rekup %d | Power: %dW | Torque: %d | Motorlevel: %d | Motor Status: %d\n",
+        //             motorSpeed, assistLevel, rekupLevel ,currentMotorPower, rawTorque, motorlevel, motorStatus);
         
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
+
+
 uint16_t processTorque(uint16_t rawTorque) {
-    static int32_t filtered_torque = 0;  // Q16-Format (16:16)
-    const TickType_t currentTime = xTaskGetTickCount();
-    static TickType_t lastWriteTime = 0;
-    static int32_t lastTorque = 0;
-    static uint16_t lastWrittenLevel = 0;
-    const TickType_t WRITE_INTERVAL = pdMS_TO_TICKS(50); // Minimum time
-    const TickType_t DECAY_INTERVAL = pdMS_TO_TICKS(100); // Minimum time
-    // 1. Fixed-Point-Konversion (12:4 Format)
-    int32_t torque = (int32_t)rawTorque * TORQUE_FACTOR >> 16;  // 12 Bit ADC → 16:16
-    
-    if(torque >= TORQUE_THRESHOLD) {
-     
-    // 2. IIR-Filter: y[n] = 0.25*x[n] + 0.75*y[n-1]
-    filtered_torque = ((torque * IIR_ALPHA) >> 16) + 
-                     ((filtered_torque * IIR_1MALPHA) >> 16);
-    
+    #define Q16_SHIFT       16
+    #define Q16_SCALE       65536
+    #define ALPHA_1PCT      ((uint32_t)(0.01 * 65536))
+    #define DECAY_MIN       ((uint32_t)(0.99 * 65536))
+    #define DECAY_MAX       ((uint32_t)(0.70 * 65536))
+    #define DECAY_RANGE     (DECAY_MIN - DECAY_MAX)
+    const TickType_t DECAY_INTERVAL = pdMS_TO_TICKS(5);
 
-    // 4. Skaliere auf 0-100% (8:24 → 0-100)
-    int32_t gauge = (filtered_torque * assistLevel)*INV_100 >> 24; // 8:24 Festkomma-Format
-    gauge = (gauge > 100) ? 100 : gauge;
-    
-    // 5. Motor-Update mit Assist
-    level = gauge  ;
-    if ((currentTime - lastWriteTime) >= WRITE_INTERVAL) {
-        writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, level);
-        lastWrittenLevel = level;
-        lastWriteTime = currentTime;
-    }
+    static int32_t filtered = 0;
+    static TickType_t lastDecay = 0;
 
-    
-    }   
-    if(torque < TORQUE_THRESHOLD)
-    {
-    const int32_t decay_shift = (filtered_torque > 30) ? 1 : 2; // 1/16 oder 1/4 pro Sekunde
-    // Füge einen minimalen Decay von 1 hinzu, wenn filtered_torque > 0
-    
-    if (((currentTime - lastWriteTime) > DECAY_INTERVAL)  && lastWrittenLevel != 0) {
-        if (filtered_torque > 0) {
-        int32_t decay = (filtered_torque >> decay_shift);
-        decay = (decay == 0) ? 1 : decay; // Mindestens 1
-        filtered_torque -= decay;
+    int32_t torque = (int32_t)rawTorque << Q16_SHIFT;
+
+    if(torque >= (TORQUE_THRESHOLD_HIGH << Q16_SHIFT)) {
+        int64_t temp = (int64_t)torque * ALPHA_1PCT + 
+                      (int64_t)filtered * (Q16_SCALE - ALPHA_1PCT);
+        filtered = (int32_t)((temp + (1 << 15)) >> Q16_SHIFT);  // Runden statt Truncate[2][5]
+    } 
+    else {
+        if((xTaskGetTickCount() - lastDecay) >= DECAY_INTERVAL) {
+            // 1. Korrekte Decay-Skalierung mit 64-bit[4]
+            int64_t decay = DECAY_MIN - ((DECAY_RANGE * (int64_t)filtered) >> 40);
+            
+            // 2. Explizite Bereichsbegrenzung[1][3]
+            decay = (decay > DECAY_MIN) ? DECAY_MIN : 
+                   (decay < DECAY_MAX) ? DECAY_MAX : decay;
+            
+            // 3. 64-bit Multiplikation mit Rundung
+            int64_t temp = (int64_t)filtered * decay;
+            filtered = (int32_t)((temp + (1 << 15)) >> Q16_SHIFT);
+            
+            lastDecay = xTaskGetTickCount();
         }
-        int32_t gauge = (filtered_torque * assistLevel)*INV_100 >> 24; // 8:24 Festkomma-Format
-        level=gauge;
-        writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, level);
-        lastWrittenLevel = level;
-        lastWriteTime = currentTime;
     }
-    }
-    lastTorque = torque;
-    return level;
+
+    // 4. Fixed-Point Division mit 24-bit Skalierung[6]
+    
+    int32_t gauge = (int32_t)((filtered * assistLevel/150) >> 16);
+    
+    // 5. Sicherheitsbegrenzung[1][4]
+    return (uint16_t)(gauge);
 }

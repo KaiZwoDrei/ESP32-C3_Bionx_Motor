@@ -24,7 +24,6 @@ TaskHandle_t buttonTaskHandle = NULL;
 SemaphoreHandle_t uartSemaphore;
 EventGroupHandle_t taskEventGroup;
 
-
 void mongooseTask(void *pvParameters) {
   while (1) {   
   mongoose_poll();
@@ -73,6 +72,7 @@ void setup() {
  //   setupBLE();
     uartSemaphore = xSemaphoreCreateMutex();
     taskEventGroup = xEventGroupCreate();
+    
     setupDisplay();
 
   

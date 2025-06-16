@@ -183,7 +183,7 @@ segmentdisp=110+rekupLevel/10; //7 segment zeigt nach 99 A0-A9, 110= b0-b9
 else if(assistLevel<0){
 segmentdisp=110-(assistLevel)/33;
 }
-else segmentdisp = motorSpeed;
+else segmentdisp =motorlevel;// motorSpeed;
 if(batteryLevel==0)
 {
 error=1;
