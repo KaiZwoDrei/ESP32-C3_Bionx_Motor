@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/event_groups.h"
+
 // Lokale Variablen
 #define UART_NUM 1
 
@@ -159,8 +160,8 @@ int16_t handleButton(int16_t& assistLevel, bool& light) {
                 
             case 3:  // Dreifachklick: System Reset oder andere Funktion
                 
-                assistLevel = 0;  // Reset Assist
-                Serial.println("System Reset");
+                writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_SHUTDOWN, 0x01);
+                Serial.println("System Shutdown");
                 break;
         }
         button.pressCount = 0;

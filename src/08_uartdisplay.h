@@ -1,7 +1,8 @@
 #pragma once
 
 #include <Arduino.h>
-
+#include "10_bionxregg.h"
+#include "05_can_functions.h"
 
 
 // Button state struct for RTOS-safe handling

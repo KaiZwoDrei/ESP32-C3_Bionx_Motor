@@ -45,15 +45,6 @@ void keepAliveTask(void *parameter);
 
 void printTaskStats() ;
 
-// Puffer-Größe
-const int CURVE_BUFFER_SIZE = 64;
-#define BUFFER_MASK (CURVE_BUFFER_SIZE - 1)
-// Datenstruktur für Torque-Messungen
-struct TorqueData {
-    int32_t value;           // Festkomma-Format
-    unsigned long timestamp;
-    bool isPeak;
-};
 
 
 // Funktionsdeklarationen

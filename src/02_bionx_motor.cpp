@@ -33,9 +33,6 @@ SemaphoreHandle_t canMutex= NULL;
 extern EventGroupHandle_t taskEventGroup;
 
 
-// Puffer für Drehmomentdaten
-TorqueData torqueBuffer[CURVE_BUFFER_SIZE] = {{0, 0, false}};
-int bufferIndex = 0;
 
 // FreeRTOS Queues für Datenübertragung zwischen Tasks
 QueueHandle_t torqueQueue;
@@ -81,23 +78,24 @@ void setupBionx() {
 }
 
 // Funktion zur Berechnung des Batterieladestands
-uint8_t calculateBatteryLevel() {
-    if (motorVoltage >= BATTERY_VOLTAGE_MAX) return 100;
-    if (motorVoltage <= BATTERY_VOLTAGE_MIN) return 0;
+uint8_t calculateBatteryLevel(uint32_t Voltage) {
+    if (Voltage >= BATTERY_VOLTAGE_MAX) return 100;
+    if (Voltage <= BATTERY_VOLTAGE_MIN) return 0;
 
     uint8_t soc = 0;
-    if (motorVoltage > BATTERY_VOLTAGE_NOM) {
+    /*if (Voltage > BATTERY_VOLTAGE_NOM) {
         // Upper range (non-linear, "exponential" approximation)
-        int32_t diff = (int32_t)motorVoltage - (int32_t)BATTERY_VOLTAGE_NOM;
+        int32_t diff = (int32_t)Voltage - (int32_t)BATTERY_VOLTAGE_NOM;
         uint32_t temp = ((int64_t)diff * BATTERY_INV_UPPER_RANGE) >> 24;
         soc = 85 + temp;
     } else {
         // Lower range (linear)
-        int32_t diff = (int32_t)motorVoltage - (int32_t)BATTERY_VOLTAGE_MIN;
+        
+        int32_t diff = (int32_t)Voltage - (int32_t)BATTERY_VOLTAGE_MIN;
         uint32_t temp = ((int64_t)diff * BATTERY_INV_LOWER_RANGE) >> 24;
         soc = temp;
-    }
-
+    }*/
+    soc=map(Voltage, BATTERY_VOLTAGE_MIN, BATTERY_VOLTAGE_MAX, 0, 100);
     // Clamp to [0, 100]
     if (soc > 100) soc = 100;
     return soc;
@@ -125,18 +123,18 @@ void torqueTask(void *parameter) {
         {writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_POWER_VOLTAGE_ENABLE , 0x01); // Aktiviere Spannung),
             lastAliveTime = xTaskGetTickCount();
         }
-        if ((xTaskGetTickCount() - lastWriteTime) >= pdMS_TO_TICKS(20)) {
+        else if((xTaskGetTickCount() - lastWriteTime) >= pdMS_TO_TICKS(20)) {
             if(motorSpeed >= MINSPEED && motorlevel > 0) {
                 writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, motorlevel);
                 lastWriteTime = xTaskGetTickCount();
-                Serial.printf("Motorlevel: %d\n", motorlevel);
+                //Serial.printf("Motorlevel: %d\n", motorlevel);
                 lastwrittenLevel = motorlevel;
             }
             else if (motorlevel == 0 && lastwrittenLevel != 0) {
                 writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, 0);
                 lastWriteTime = xTaskGetTickCount();
                 lastwrittenLevel = motorlevel;
-                Serial.printf("Motorlevel: %d\n", motorlevel);
+                //Serial.printf("Motorlevel: %d\n", motorlevel);
             }
             if (rekupLevel > 0) {
                 writeBionxRegister(BXID_MOTOR, BXR_MOTOR_LEVEL, -rekupLevel*100/150);
@@ -185,8 +183,9 @@ void speedTask(void *parameter) {
         //rekupLevel = readUART(); //nur bei angeschlossenem throttle oder brake 
 
         //if(xQueueReceive(speedQueue, &speed, 0))
+        int16_t batterylevel= calculateBatteryLevel(motorVoltage);
         //{
-        updateDisplay(assistLevel,rekupLevel, motorSpeed, motorStatus, calculateBatteryLevel(), motorlevel);
+        updateDisplay(assistLevel,rekupLevel, motorSpeed, motorStatus, batterylevel, motorlevel);
         //}
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
