@@ -12,16 +12,7 @@
 #include "05_can_functions.h"
 
 // motor.h
-extern int16_t assistLevel;
-extern uint16_t motorSpeed;
-extern uint16_t motorPower;
-extern uint16_t motorTemperature;
-extern uint16_t motorStatus;
-extern uint32_t motorVoltage;
-extern int32_t gauge;
-extern int16_t rekupLevel;
-extern int32_t level;
-extern int16_t motorlevel; 
+extern struct BionxMotorState motorState;
 int16_t webassistLevel;
 uint16_t temp1;
 uint16_t temp2;
@@ -39,9 +30,9 @@ void glue_set_leds(struct leds *data) {
 
 
 void glue_get_motor(struct motor *data) {
-  data->power = motorPower;  // Sync with your device
-  data->level = assistLevel;
-  data->speed = motorSpeed;
+  data->power = motorState.motorPower;  // Sync with your device
+  data->level = motorState.assistLevel;
+  data->speed = motorState.motorSpeed;
 }
 void glue_set_motor(struct motor *data) {
   webassistLevel = data->level; // Sync with your device

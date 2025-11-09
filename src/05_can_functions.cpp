@@ -2,93 +2,60 @@
 #include <esp32_can.h>
 #include "freertos/semphr.h"
 
-extern SemaphoreHandle_t canMutex;
+#include "10_bionxregg.h"
+SemaphoreHandle_t canMutex;  
+static uint32_t mutexBlockCount = 0;
 
 void setupCAN() {
     CAN0.setCANPins(GPIO_NUM_0, GPIO_NUM_1); // für supermicro
-//    CAN0.setCANPins(GPIO_NUM_19, GPIO_NUM_13);  für luatos esp32c3 
-
     CAN0.begin(125000);
+    //CAN0.setRXFilter(0, 0x08, 0x7FF, false);  // Filter auf ID 0x08
+    //CAN0.watchFor();
+    CAN0.watchFor(0x08,0x7FF);
+    canMutex = xSemaphoreCreateMutex();
 }
 bool readBionxRegister(int canId, uint16_t address, uint16_t *result) {
-    CAN_FRAME txFrame;
-    txFrame.rtr = 0;
-    txFrame.id = canId;
-    txFrame.extended = false;
-    txFrame.length = 2;
-    txFrame.data.uint8[0] = 0;
-    txFrame.data.uint8[1] = address;
+    bool readSuccess = false;
+    if (xSemaphoreTake(canMutex, pdMS_TO_TICKS(5)) == pdTRUE) {
+        CAN_FRAME txFrame;
+        txFrame.rtr = 0;
+        txFrame.id = canId;
+        txFrame.extended = false;
+        txFrame.length = 2;
+        txFrame.data.uint8[0] = 0;
+        txFrame.data.uint8[1] = address;
 
-    CAN0.sendFrame(txFrame);
-
-    TickType_t startTime = xTaskGetTickCount();
-    const TickType_t timeout = pdMS_TO_TICKS(20);
-
-    while ((xTaskGetTickCount() - startTime) < timeout) {
-        CAN0.watchFor(0x08);
-        if (CAN0.read(txFrame) && 
-            txFrame.data.uint8[0] == 0 && 
-            txFrame.data.uint8[1] == address) {
-            *result = (txFrame.data.uint8[2] << 8) | txFrame.data.uint8[3];
-            return true;
+        CAN0.sendFrame(txFrame);
+        CAN_FRAME dummyFrame;
+        while (CAN0.read(dummyFrame)) {
+            // Alte Frames verwerfen
         }
-        taskYIELD();  // Kritisch für RTOS-Stabilität
-    }
-    return false;
-}
+        TickType_t startTime = xTaskGetTickCount();
+        const TickType_t timeout = pdMS_TO_TICKS(4);
 
-bool writeBionxRegister(int canId, uint16_t address, uint16_t value) {
-    CAN_FRAME txFrame;
-    txFrame.rtr = 0;
-    txFrame.id = canId;
-    txFrame.extended = false;
-    txFrame.length = 4;
-    txFrame.data.uint8[0] = 0;
-    txFrame.data.uint8[1] = address;
-    txFrame.data.uint8[2] = (value >> 8) & 0xFF;
-    txFrame.data.uint8[3] = value & 0xFF;
-    return CAN0.sendFrame(txFrame);
-}
-
-/*bool readBionxRegister(int canId, uint16_t address, uint16_t *result) {
-    if(xSemaphoreTake(canMutex, pdMS_TO_TICKS(50)) == pdFALSE) return false;
-
-    CAN_FRAME txFrame;
-    memset(&txFrame, 0, sizeof(txFrame));
-    txFrame.rtr = 0;
-    txFrame.id = canId;
-    txFrame.extended = false;
-    txFrame.length = 2;
-    txFrame.data.uint8[0] = 0;
-    txFrame.data.uint8[1] = address;
-
-    CAN0.sendFrame(txFrame);
-
-    // Antwort-ID gemäß BionX-Protokoll (Request-ID + 0x08)
-    const uint32_t responseId = canId + 0x08;
-    const TickType_t startTime = xTaskGetTickCount();
-    const TickType_t timeout = pdMS_TO_TICKS(20);
-
-    bool success = false;
-    while ((xTaskGetTickCount() - startTime) < timeout) {
-        CAN_FRAME rxFrame;
-        if(CAN0.read(rxFrame)) {
-            if(rxFrame.id == responseId && 
-               rxFrame.data.uint8[1] == address) {
-                *result = (rxFrame.data.uint8[2] << 8) | rxFrame.data.uint8[3];
-                success = true;
+        while ((xTaskGetTickCount() - startTime) < timeout) {
+            if (CAN0.read(txFrame) && txFrame.data.uint8[0] == 0 && txFrame.data.uint8[1] == address) {
+                *result = (txFrame.data.uint8[2] << 8) | txFrame.data.uint8[3];
+                readSuccess = true;
                 break;
             }
+            taskYIELD();
         }
-        taskYIELD();  // Kritisch für RTOS-Stabilität [2][3]
+        xSemaphoreGive(canMutex);
+    } else {
+        mutexBlockCount++;
+        if (mutexBlockCount >= 10) {
+            Serial.println("CAN 100 mal blockiert!");
+            mutexBlockCount = 0;
+        }
     }
-
-    xSemaphoreGive(canMutex);
-    return success;
+    if (!readSuccess)
+        Serial.printf("Fail to read address 0x%02X - %s\n", address, getMotorText(address));
+    return readSuccess;
 }
 
 bool writeBionxRegister(int canId, uint16_t address, uint16_t value) {
-    if(xSemaphoreTake(canMutex, pdMS_TO_TICKS(50)) == pdFALSE) return false;
+    //vTaskDelay(pdMS_TO_TICKS(2)); // Kurze Pause nach dem Senden
 
     CAN_FRAME txFrame;
     txFrame.rtr = 0;
@@ -99,8 +66,9 @@ bool writeBionxRegister(int canId, uint16_t address, uint16_t value) {
     txFrame.data.uint8[1] = address;
     txFrame.data.uint8[2] = (value >> 8) & 0xFF;
     txFrame.data.uint8[3] = value & 0xFF;
-    bool ret = CAN0.sendFrame(txFrame);
-    xSemaphoreGive(canMutex);
-    return ret;
-}*/
+    bool result = CAN0.sendFrame(txFrame);
+    bool result2 = CAN0.sendFrame(txFrame);
+    return result||result2;
+   // vTaskDelay(pdMS_TO_TICKS(2)); 
 
+}
