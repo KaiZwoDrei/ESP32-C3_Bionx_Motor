@@ -91,15 +91,36 @@ void setupButtons() {
 }
 
 
+static uint32_t filteredVoltage = 54000UL;
+
 uint8_t calculateBatteryLevel(uint32_t Voltage) {
-    if (Voltage >= BATTERY_VOLTAGE_MAX) return 100;
-    if (Voltage <= BATTERY_VOLTAGE_MIN) return 0;
 
+    #define FILTER_SCALE 100
+    #define ALPHA 10     // 0.05 * 1000
+    #define BATTERY_VOLTAGE_MIN 39000UL
+    #define BATTERY_VOLTAGE_MAX 54600UL
+    #define UPPER_LINEAR_START  51500UL
+    #define LOWER_LINEAR_END    44000UL
+            filteredVoltage = ((FILTER_SCALE - ALPHA) * filteredVoltage + ALPHA * Voltage) / FILTER_SCALE;
 
-    uint8_t soc = map(Voltage, BATTERY_VOLTAGE_MIN, BATTERY_VOLTAGE_MAX, 0, 100);
-    if (soc > 100) soc = 100;
-    return soc;
+    // Umrechnung in einfachen Integer mV für Bereiche
+
+    if (filteredVoltage >= BATTERY_VOLTAGE_MAX) return 100;
+    if (filteredVoltage <= BATTERY_VOLTAGE_MIN) return 0;
+
+    if (filteredVoltage > UPPER_LINEAR_START) {
+        return 85 + (uint8_t)((filteredVoltage - UPPER_LINEAR_START) * 15 / (BATTERY_VOLTAGE_MAX - UPPER_LINEAR_START));
+    } else if (filteredVoltage >= LOWER_LINEAR_END) {
+        return 30 + (uint8_t)((filteredVoltage - LOWER_LINEAR_END) * 55 / (UPPER_LINEAR_START - LOWER_LINEAR_END));
+    } else {
+        return (uint8_t)(filteredVoltage * 30 / LOWER_LINEAR_END);
+    }
 }
+
+
+
+
+
 
 
 void torqueTask(void *parameter) {
@@ -114,7 +135,7 @@ void torqueTask(void *parameter) {
     static TickType_t lastread = 0;
     static TickType_t errorBlockStart = 0;
     const int ERROR_THRESHOLD = 20;
-    const TickType_t ERROR_BLOCK_TIME = pdMS_TO_TICKS(1000); // 1 Sekunde
+    const TickType_t ERROR_BLOCK_TIME = pdMS_TO_TICKS(10000); // 1 Sekunde
 
 
     while(1) {
@@ -260,7 +281,15 @@ void statusTask(void *parameter) {
                 int16_t batterylevel = calculateBatteryLevel(motorState.motorVoltage);
                 updateDisplay(motorState.assistLevel, motorState.rekupLevel, motorState.motorSpeed,
                               motorState.motorStatus, batterylevel, motorState.motorlevel, motorState.light);
-                glue_update_state();              
+                glue_update_state();     
+                
+                Serial.printf("Pwr:%3dW Vol:%5dmV Cur:%4dmA Spd:%4drpm\r\n", 
+                            motorState.motorPower, motorState.motorVoltage, 
+                            motorState.currentMotorPower, motorState.motorSpeed);
+
+                Serial.printf("Mode:%1d  Assist:%1d  Rekup:%1d  Bat:%3d%%\r\n", 
+                            motorState.motorStatus, motorState.assistLevel, 
+                            motorState.rekupLevel, batterylevel);         
                 break;
         }
 

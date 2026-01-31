@@ -8,12 +8,12 @@
 #include "freertos/semphr.h"
 
 // Task Prioritäten
-#define TASK_PRIO_TORQUE   5  // Höchste Priorität
-#define TASK_PRIO_BUTTON   5
-#define TASK_PRIO_CAN      5
-#define TASK_PRIO_STATUS   5  
-#define TASK_PRIO_BLE      5
-#define TASK_PRIO_DISPLAY  5  // Niedrigste Priorität
+#define TASK_PRIO_TORQUE   1  // Höchste Priorität
+#define TASK_PRIO_BUTTON   1
+#define TASK_PRIO_CAN      1
+#define TASK_PRIO_STATUS   1  
+#define TASK_PRIO_BLE      1
+#define TASK_PRIO_DISPLAY  1 // Niedrigste Priorität
 
 // Stack Größen
 #define TASK_STACK_SIZE 2048

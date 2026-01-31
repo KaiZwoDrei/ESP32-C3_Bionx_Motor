@@ -12,7 +12,9 @@
 
 #define Button_PIN  4
 #define TXD_PIN 9   // ESP32-C3 Supermicro
-#define RXD_PIN 10  // ESP32-C3 Supermicro
+//#define RXD_PIN 10  // ESP32-C3 Supermicro
+#define RXD_PIN 7  // ESP32-C3 Supermicro
+
 
 #define UART_BAUD_RATE 115200
 #define UART_QUEUE_SIZE 10
@@ -26,8 +28,8 @@ bool  light;  // status Licht
 // Assistenzmodi
 const int16_t MODE_OFF = 0;
 const int16_t MODE_ECO = 50;
-const int16_t MODE_DRIVE = 100;
-const int16_t MODE_SPORT = 150;
+const int16_t MODE_DRIVE = 75;
+const int16_t MODE_SPORT = 100;
 
 // Rekuperationswerte (negativ)
 const int16_t Recu_1 = -16;
@@ -133,7 +135,7 @@ int16_t handleButton(int16_t &assistLevel, bool &light, int16_t &recuLevel) {
     Serial.println(button.pressCount);
 
     switch (button.pressCount) {
-        case 2:  // Doppelklick: Wechsel zwischen Reku- und Normalmodus
+        case 3:  // Doppelklick: Wechsel zwischen Reku- und Normalmodus
             if (recuLevel == 0) {
                 // Rekuperation einschalten, auf Basis aktuellen assistLevel
                 toggleRecuMode(assistLevel, recuLevel);
@@ -169,7 +171,7 @@ int16_t handleButton(int16_t &assistLevel, bool &light, int16_t &recuLevel) {
             }
             break;
 
-        case 3:  // Dreifachklick: Beispiel System Shutdown
+        case 2:  // Dreifachklick: Beispiel System Shutdown
             writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_SHUTDOWN, 0x01);
             Serial.println("System Shutdown");
             break;

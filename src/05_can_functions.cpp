@@ -44,7 +44,7 @@ bool readBionxRegister(int canId, uint16_t address, uint16_t *result) {
         xSemaphoreGive(canMutex);
     } else {
         mutexBlockCount++;
-        if (mutexBlockCount >= 10) {
+        if (mutexBlockCount >= 1000) {
             Serial.println("CAN 100 mal blockiert!");
             mutexBlockCount = 0;
         }

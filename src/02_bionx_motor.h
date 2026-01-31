@@ -38,9 +38,6 @@ const int32_t TORQUE_THRESHOLD_LOW = 2;
 #define INV_1000 ((uint32_t)(FIXED_SCALE / 1000))
 #define INV_51 ((uint32_t)(FIXED_SCALE / 51))
 
-#define BATTERY_VOLTAGE_MIN 39000UL    // 39.0V in mV
-#define BATTERY_VOLTAGE_NOM 48100UL    // 48.1V in mV
-#define BATTERY_VOLTAGE_MAX 54600UL    // 54.6V in mV
 
 #define MINSPEED 0 // Minimalgeschwindigkeit für Unterstützung (in U/min)
 
