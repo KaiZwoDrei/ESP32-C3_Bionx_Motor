@@ -97,7 +97,6 @@ void setup() {
         xTaskCreatePinnedToCore(keepAliveTask,"KeepAlive",  TASK_STACK_SIZE, NULL, TASK_PRIO_TORQUE,  NULL, 0);
         xTaskCreatePinnedToCore(statusTask,   "Status",     TASK_STACK_SIZE, NULL, TASK_PRIO_STATUS,  NULL, 0);
         xTaskCreatePinnedToCore(buttonTask,   "Button",     TASK_STACK_SIZE, NULL, TASK_PRIO_BUTTON,  NULL, 0);
-        xTaskCreatePinnedToCore(speedTask,    "Display/speed", TASK_STACK_SIZE, NULL, TASK_PRIO_DISPLAY, NULL, 0);
     } else {
         Serial.println("Config Mode: Motor-Tasks deaktiviert (kein Bus-Zugriff)");
     }

@@ -28,8 +28,8 @@ bool  light;  // status Licht
 // Assistenzmodi
 const int16_t MODE_OFF = 0;
 const int16_t MODE_ECO = 50;
-const int16_t MODE_DRIVE = 75;
-const int16_t MODE_SPORT = 100;
+const int16_t MODE_DRIVE = 100;
+const int16_t MODE_SPORT = 150;
 
 // Rekuperationswerte (negativ)
 const int16_t Recu_1 = -16;
@@ -147,6 +147,8 @@ int16_t handleButton(int16_t &assistLevel, bool &light, int16_t &recuLevel) {
             break;
 
         case 1:  // Einzelklick: Modi wechseln
+            Serial.print("Case 1 Click. RecuLevel: ");
+            Serial.println(recuLevel);
             if (recuLevel != 0) {
                 // Im Rekuperationsmodus -> Rekuperationslevel zyklisch wechseln
                 int idx = 0;
@@ -187,9 +189,10 @@ int16_t handleButton(int16_t &assistLevel, bool &light, int16_t &recuLevel) {
 }
 
 uint8_t getModeDisplay(int16_t assistLevel, int8_t recuplevel) {
-    if (recuplevel == Recu_1) return 128 + 2;     // ECO Symbol
-    if (recuplevel == Recu_2) return 128 + 1;     // DRIVE Symbol
-    if (recuplevel == Recu_3) return 128 + 4;     // SPORT Symbol
+    // Dynamic Rekup display based on level intensity
+    if (recuplevel <= -45) return 128 + 4;        // High Regen (Sport Symbol + Regen flag)
+    if (recuplevel <= -25) return 128 + 1;        // Medium Regen (Drive Symbol + Regen flag)
+    if (recuplevel < 0)    return 128 + 2;        // Low Regen (Eco Symbol + Regen flag)
 
     if (assistLevel == MODE_OFF) return 16;       // OFF Symbol
     if (assistLevel == MODE_ECO) return 2;        // ECO Symbol
@@ -225,12 +228,16 @@ void updateDisplay(int16_t assistLevel, int8_t rekupLevel, uint8_t motorSpeed, u
     int8_t segmentdisp;
     int8_t error = 0;
 
-    if (rekupLevel < 0) {
-        segmentdisp = 110 - rekupLevel / 16;  // 7-Segment Anzeige A0-A9, 110 = b0-b9 
-    } else if (assistLevel < 0) {
-        segmentdisp = 110 - (assistLevel) / 33;
+    if (light ||rekupLevel < 0) {
+        if (rekupLevel < 0) {
+            segmentdisp = 110 - rekupLevel / 16;  // 7-Segment Anzeige A0-A9, 110 = b0-b9 
+        } else if (assistLevel < 0) {
+            segmentdisp = 110 - (assistLevel) / 33;
+        } else {
+            segmentdisp = motorlevel + (motorlevel >> 1) + (motorlevel >> 4); // Umrechnung 0-64 --> 0-100
+        }
     } else {
-        segmentdisp = motorlevel + (motorlevel >> 1) + (motorlevel >> 4); // Umrechnung 0-64 --> 0-100
+        segmentdisp = motorSpeed; // Speed auf Bar-Graph wenn Licht aus
     }
 
     if (batteryLevel == 0) {

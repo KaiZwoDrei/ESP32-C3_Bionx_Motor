@@ -55,7 +55,6 @@ const unsigned long PEAK_INTERVAL = 400;     // Zeit zwischen Peaks bei 60 U/min
 void torqueTask(void *parameter);
 void statusTask(void *parameter);
 void buttonTask(void *parameter);
-void speedTask(void *parameter);
 void keepAliveTask(void *parameter);
 
 // Mutex für CAN-Bus Zugriff

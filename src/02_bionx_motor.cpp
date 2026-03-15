@@ -10,8 +10,12 @@
 #include "mongoose/mongoose_glue.h"
 
 
-#define BUTTON_PIN_8 8
-#define BUTTON_PIN_20 20
+//#define BUTTON_PIN_8 8
+//#define BUTTON_PIN_20 20
+
+#define BUTTON_PIN_8 6
+
+#define BUTTON_PIN_20 9
 
 
 ButtonState button;
@@ -35,9 +39,13 @@ struct BionxMotorState motorState = {
 };
 
 
+
 const TickType_t REKUP_RAMP_TIME_MS = 500;
 TickType_t rekupStartTime = 0;
 bool rekupActive = false;
+TickType_t lastActivityTime = 0;
+
+bool batteryConnected = false;
 
 
 extern EventGroupHandle_t taskEventGroup;
@@ -54,7 +62,8 @@ QueueHandle_t statusQueue;
 
 void setupBionx() {
     uint16_t softwareVersion;
-
+    pinMode(BUTTON_PIN_8, INPUT_PULLUP);
+    pinMode(BUTTON_PIN_20, INPUT_PULLUP);
 
 
 
@@ -63,8 +72,20 @@ void setupBionx() {
         delay(200);
     }
 
+    batteryConnected = false;
+    for(int i=0; i<=10; i++) {
+        if (writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_ACCESSORY_ENABLED, 0x01)) {
+            batteryConnected = true;
+            break;
+        }
+        delay(200);
+    }
 
-    writeBionxRegister(ID_BATTERY, REG_BATTERY_CONFIG_ACCESSORY_ENABLED, 0x01);
+    if (!batteryConnected) {
+        Serial.println("Keine Verbindung zu ID_Battery. Keep Alive Task deaktivert.");
+    } else {
+        Serial.println("Verbindung zu ID_Battery hergestellt.");
+    }
 
     Serial.print("Found motor with software version: ");
     Serial.println(softwareVersion);
@@ -85,20 +106,17 @@ void setupBionx() {
 }
 
 
-void setupButtons() {
-    pinMode(BUTTON_PIN_8, INPUT_PULLUP);
-    pinMode(BUTTON_PIN_20, INPUT_PULLUP);
-}
+
 
 
 static uint32_t filteredVoltage = 54000UL;
 
 uint8_t calculateBatteryLevel(uint32_t Voltage) {
 
-    #define FILTER_SCALE 100
+    #define FILTER_SCALE 300
     #define ALPHA 10     // 0.05 * 1000
-    #define BATTERY_VOLTAGE_MIN 39000UL
-    #define BATTERY_VOLTAGE_MAX 54600UL
+    #define BATTERY_VOLTAGE_MIN 38000UL
+    #define BATTERY_VOLTAGE_MAX 53600UL
     #define UPPER_LINEAR_START  51500UL
     #define LOWER_LINEAR_END    44000UL
             filteredVoltage = ((FILTER_SCALE - ALPHA) * filteredVoltage + ALPHA * Voltage) / FILTER_SCALE;
@@ -108,12 +126,20 @@ uint8_t calculateBatteryLevel(uint32_t Voltage) {
     if (filteredVoltage >= BATTERY_VOLTAGE_MAX) return 100;
     if (filteredVoltage <= BATTERY_VOLTAGE_MIN) return 0;
 
-    if (filteredVoltage > UPPER_LINEAR_START) {
-        return 85 + (uint8_t)((filteredVoltage - UPPER_LINEAR_START) * 15 / (BATTERY_VOLTAGE_MAX - UPPER_LINEAR_START));
-    } else if (filteredVoltage >= LOWER_LINEAR_END) {
-        return 30 + (uint8_t)((filteredVoltage - LOWER_LINEAR_END) * 55 / (UPPER_LINEAR_START - LOWER_LINEAR_END));
+    // Repräsentation einer Li-Ion 13S Entladekurve (typisches Verhalten bei 48V)
+    // 53.6V (100%) -> 52.0V (90%): Schneller anfänglicher Abfall
+    // 52.0V ( 90%) -> 46.5V (20%): Relativ flaches Plateau
+    // 46.5V ( 20%) -> 38.0V ( 0%): Steiler Abfall am Ende
+
+    if (filteredVoltage >= 52000UL) {
+        // 52.0V - 53.6V entspricht 90% bis 100%
+        return 90 + (uint8_t)((filteredVoltage - 52000UL) * 10 / (BATTERY_VOLTAGE_MAX - 52000UL));
+    } else if (filteredVoltage >= 46500UL) {
+        // 46.5V - 52.0V entspricht 20% bis 90%
+        return 20 + (uint8_t)((filteredVoltage - 46500UL) * 70 / (52000UL - 46500UL));
     } else {
-        return (uint8_t)(filteredVoltage * 30 / LOWER_LINEAR_END);
+        // 38.0V - 46.5V entspricht 0% bis 20%
+        return (uint8_t)((filteredVoltage - BATTERY_VOLTAGE_MIN) * 20 / (46500UL - BATTERY_VOLTAGE_MIN));
     }
 }
 
@@ -140,6 +166,34 @@ void torqueTask(void *parameter) {
 
     while(1) {
         TickType_t currentTime = xTaskGetTickCount();
+
+        // Bremsdruck auslesen (digitalRead benötigt <1 Mikrosekunde auf dem ESP32)
+        bool brakeLeftPressed = digitalRead(BUTTON_PIN_8) == LOW;
+        bool brakeRightPressed = digitalRead(BUTTON_PIN_20) == LOW;
+        bool brakePressed = brakeLeftPressed || brakeRightPressed;
+        
+        // Bremsdruck setzt motorState.rekupLevel nur, wenn nicht gerade Rekup-Modus aktiv ist
+        if (brakePressed) {
+            if (!rekupActive) {
+                rekupStartTime = currentTime;
+                rekupActive = true;
+                Serial.println("Rekup Modus gestartet");
+            }
+            TickType_t elapsed = (currentTime - rekupStartTime) * portTICK_PERIOD_MS;
+            if (elapsed > REKUP_RAMP_TIME_MS) elapsed = REKUP_RAMP_TIME_MS;
+
+            if (motorState.rekupLevel <= 0) { // wenn kein button-bedingter Rekup-Modus
+                motorState.rekupLevel = (int16_t)((-(int32_t)elapsed * 100) / (int32_t)REKUP_RAMP_TIME_MS);
+            }
+        } else {
+            rekupActive = false;
+            motorState.rekupLevel = 0;
+        }
+
+        if (motorState.rawTorque > TORQUE_THRESHOLD_LOW) {
+             lastActivityTime = currentTime;
+        }
+
         TickType_t start_time = currentTime;
         if (errorCounter >= ERROR_THRESHOLD) {
             if ((currentTime - errorBlockStart) >= ERROR_BLOCK_TIME) {
@@ -177,7 +231,7 @@ void torqueTask(void *parameter) {
                 writeBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_LEVEL, motorState.rekupLevel * 64 / 150);
                 lastWriteTime = currentTime;
                 lastwrittenLevel = motorState.motorlevel;
-            }
+        }
         }
         
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
@@ -188,36 +242,12 @@ void torqueTask(void *parameter) {
 void buttonTask(void *parameter) {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(30);
-
-
     while(1) {
-        TickType_t now = xTaskGetTickCount();
-
-
-        motorState.assistLevel = handleButton(motorState.assistLevel, motorState.light, motorState.rekupLevel);
-        
-        bool brakeLeftPressed = digitalRead(BUTTON_PIN_8) == LOW;
-        bool brakeRightPressed = digitalRead(BUTTON_PIN_20) == LOW;
-        bool brakePressed = brakeLeftPressed || brakeRightPressed;
-
-        // Bremsdruck setzt motorState.rekupLevel nur, wenn nicht gerade Rekup-Modus aktiv ist
-        if (brakePressed) {
-            if (!rekupActive) {
-                rekupStartTime = now;
-                rekupActive = true;
-            }
-            TickType_t elapsed = (now - rekupStartTime) * portTICK_PERIOD_MS;
-            if (elapsed > REKUP_RAMP_TIME_MS) elapsed = REKUP_RAMP_TIME_MS;
-
-            if (motorState.rekupLevel <= 0) { // wenn kein button-bedingter Rekup-Modus
-                motorState.rekupLevel = (int16_t)((-elapsed * 64) / REKUP_RAMP_TIME_MS);
-            }
-        } else {
-            rekupActive = false;
-
-        }
+        int16_t newLevel = handleButton(motorState.assistLevel, motorState.light, motorState.rekupLevel);
+        vTaskDelayUntil(&xLastWakeTime, xFrequency);
     }
 }
+
 
 
 void keepAliveTask(void *parameter) {
@@ -225,6 +255,10 @@ void keepAliveTask(void *parameter) {
     const TickType_t xFrequency = pdMS_TO_TICKS(500);
     
     while(1) {
+        if (!batteryConnected) {
+            vTaskDelayUntil(&xLastWakeTime, xFrequency);
+            continue;
+        }
         TickType_t currentTime = xTaskGetTickCount();
         static TickType_t lastAliveTime = 0;
         if ((currentTime - lastAliveTime) >= pdMS_TO_TICKS(400)) {
@@ -236,17 +270,6 @@ void keepAliveTask(void *parameter) {
 }
 
 
-
-void speedTask(void *parameter) {
-    TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(150);
-
-
-    while(1) {
-        
-        vTaskDelayUntil(&xLastWakeTime, xFrequency);
-    }
-}
 
 
 void statusTask(void *parameter) {
@@ -278,6 +301,9 @@ void statusTask(void *parameter) {
                 break;
             case 4:
                 readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_SPEED, &motorState.motorSpeed);
+                if (motorState.motorSpeed > 0) {
+                    lastActivityTime = xTaskGetTickCount();
+                }
                 int16_t batterylevel = calculateBatteryLevel(motorState.motorVoltage);
                 updateDisplay(motorState.assistLevel, motorState.rekupLevel, motorState.motorSpeed,
                               motorState.motorStatus, batterylevel, motorState.motorlevel, motorState.light);
@@ -351,6 +377,20 @@ uint16_t processTorque(uint16_t rawTorque) {
 
 
     int32_t gauge = (int32_t)((filtered * motorState.assistLevel / 150) >> 16);
+
+    // Voltage Throttling: 43V (100%) -> 39V (50%)
+    if (motorState.motorVoltage < 43000 && motorState.motorVoltage > 0) { // Check > 0 to avoid throttling on startup/zero reading
+        if (motorState.motorVoltage <= 39000) {
+            gauge = gauge * 50 / 100;
+        } else {
+            // Linear scale
+            // Range 4000mV. 
+            // Scale factor goes from 50 to 100.
+            // factor = 50 + (voltage - 39000) * 50 / 4000
+            int32_t factor = 50 + (motorState.motorVoltage - 39000) * 50 / 4000;
+            gauge = gauge * factor / 100;
+        }
+    }
 
 
     return (uint16_t)(gauge);
