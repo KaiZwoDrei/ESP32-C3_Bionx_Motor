@@ -93,10 +93,12 @@ void setup() {
     // **TASKS NUR IM NORMAL MODE erstellen!**
     if (!configMode) {
         Serial.println("Starte Motor-Control Tasks...");
-        xTaskCreatePinnedToCore(torqueTask,   "Torque",     TASK_STACK_SIZE, NULL, TASK_PRIO_TORQUE,  NULL, 0);
-        xTaskCreatePinnedToCore(keepAliveTask,"KeepAlive",  TASK_STACK_SIZE, NULL, TASK_PRIO_TORQUE,  NULL, 0);
-        xTaskCreatePinnedToCore(statusTask,   "Status",     TASK_STACK_SIZE, NULL, TASK_PRIO_STATUS,  NULL, 0);
-        xTaskCreatePinnedToCore(buttonTask,   "Button",     TASK_STACK_SIZE, NULL, TASK_PRIO_BUTTON,  NULL, 0);
+        xTaskCreatePinnedToCore(torqueTask,       "Torque",    TASK_STACK_SIZE,     NULL, TASK_PRIO_TORQUE,  NULL, 0);
+        xTaskCreatePinnedToCore(keepAliveTask,    "KeepAlive", TASK_STACK_SIZE,     NULL, TASK_PRIO_TORQUE,  NULL, 0);
+        xTaskCreatePinnedToCore(statusTask,       "Status",    TASK_STACK_SIZE,     NULL, TASK_PRIO_STATUS,  NULL, 0);
+        xTaskCreatePinnedToCore(buttonTask,       "Button",    TASK_STACK_SIZE,     NULL, TASK_PRIO_BUTTON,  NULL, 0);
+        // CAN-Watchdog: höchste Prio, erkennt BUS_OFF und Timeout-Fehler
+        xTaskCreatePinnedToCore(canWatchdogTask,  "CANWatch",  TASK_STACK_SIZE * 2, NULL, configMAX_PRIORITIES - 1, NULL, 0);
     } else {
         Serial.println("Config Mode: Motor-Tasks deaktiviert (kein Bus-Zugriff)");
     }

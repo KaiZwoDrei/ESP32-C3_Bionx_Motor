@@ -135,6 +135,9 @@ struct attribute s_settings_attributes[] = {
   {"gaugegain", "int", NULL, offsetof(struct settings, gaugegain), 0, false},
   {"read", "bool", NULL, offsetof(struct settings, read), 0, false},
   {"maxspeed", "int", NULL, offsetof(struct settings, maxspeed), 0, false},
+  {"wheeldiameter", "int", NULL, offsetof(struct settings, wheeldiameter), 0, false},
+  {"maxcurrent", "int", NULL, offsetof(struct settings, maxcurrent), 0, false},
+  {"walklevel", "int", NULL, offsetof(struct settings, walklevel), 0, false},
   {NULL, NULL, NULL, 0, 0, false}
 };
 struct attribute s_motor_attributes[] = {
@@ -149,6 +152,8 @@ struct attribute s_state_attributes[] = {
   {"power", "int", NULL, offsetof(struct state, power), 0, false},
   {"torque", "int", NULL, offsetof(struct state, torque), 0, false},
   {"temperature", "int", NULL, offsetof(struct state, temperature), 0, false},
+  {"voltage", "double", NULL, offsetof(struct state, voltage), 0, false},
+  {"current", "double", NULL, offsetof(struct state, current), 0, false},
   {NULL, NULL, NULL, 0, 0, false}
 };
 struct attribute s_read_attributes[] = {

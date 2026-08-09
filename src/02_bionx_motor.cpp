@@ -115,10 +115,10 @@ uint8_t calculateBatteryLevel(uint32_t Voltage) {
 
     #define FILTER_SCALE 300
     #define ALPHA 10     // 0.05 * 1000
-    #define BATTERY_VOLTAGE_MIN 38000UL
-    #define BATTERY_VOLTAGE_MAX 53600UL
-    #define UPPER_LINEAR_START  51500UL
-    #define LOWER_LINEAR_END    44000UL
+    #define BATTERY_VOLTAGE_MIN 38000UL     // ~2.9V per Zelle (LG MJ1 entlädt bis 2.5V, aber unter 2.9V ist wenig Energie und hoher Sag)
+    #define BATTERY_VOLTAGE_MAX 53600UL     // ~4.12V per Zelle
+    #define UPPER_LINEAR_START  51500UL     // ~3.96V per Zelle (Ende des exponentiellen Abfalls nach voll)
+    #define LOWER_LINEAR_END    44000UL     // ~3.38V per Zelle (Beginn des steilen "Knie"-Abfalls am Schluss)
             filteredVoltage = ((FILTER_SCALE - ALPHA) * filteredVoltage + ALPHA * Voltage) / FILTER_SCALE;
 
     // Umrechnung in einfachen Integer mV für Bereiche
@@ -126,20 +126,27 @@ uint8_t calculateBatteryLevel(uint32_t Voltage) {
     if (filteredVoltage >= BATTERY_VOLTAGE_MAX) return 100;
     if (filteredVoltage <= BATTERY_VOLTAGE_MIN) return 0;
 
-    // Repräsentation einer Li-Ion 13S Entladekurve (typisches Verhalten bei 48V)
-    // 53.6V (100%) -> 52.0V (90%): Schneller anfänglicher Abfall
-    // 52.0V ( 90%) -> 46.5V (20%): Relativ flaches Plateau
-    // 46.5V ( 20%) -> 38.0V ( 0%): Steiler Abfall am Ende
+    // Repräsentation einer LG MJ1 Entladekurve (13S)
+    // 53.6V (100%) -> 51.5V (90%): Schneller anfänglicher Abfall vom Ladeschluss
+    // 51.5V ( 90%) -> 44.0V (15%): Relativ flaches, langes LG MJ1 Plateau
+    // 44.0V ( 15%) -> 38.0V ( 0%): Steiler Abfall am Ende der Ladung
 
-    if (filteredVoltage >= 52000UL) {
-        // 52.0V - 53.6V entspricht 90% bis 100%
-        return 90 + (uint8_t)((filteredVoltage - 52000UL) * 10 / (BATTERY_VOLTAGE_MAX - 52000UL));
-    } else if (filteredVoltage >= 46500UL) {
-        // 46.5V - 52.0V entspricht 20% bis 90%
-        return 20 + (uint8_t)((filteredVoltage - 46500UL) * 70 / (52000UL - 46500UL));
+    // Fixed Point Berechnung (Skalierung um 8 Bit: << 8) für höchste Präzision vor der Division
+    if (filteredVoltage >= UPPER_LINEAR_START) {
+        // Obere 10% (100% bis 90%)
+        uint32_t diff = filteredVoltage - UPPER_LINEAR_START;
+        uint32_t resultQ8 = (diff * 10 << 8) / (BATTERY_VOLTAGE_MAX - UPPER_LINEAR_START);
+        return 90 + (uint8_t)((resultQ8 + 128) >> 8);
+    } else if (filteredVoltage >= LOWER_LINEAR_END) {
+        // Das große Plateau (90% bis 15%) => 75% Spannweite
+        uint32_t diff = filteredVoltage - LOWER_LINEAR_END;
+        uint32_t resultQ8 = (diff * 75 << 8) / (UPPER_LINEAR_START - LOWER_LINEAR_END);
+        return 15 + (uint8_t)((resultQ8 + 128) >> 8);
     } else {
-        // 38.0V - 46.5V entspricht 0% bis 20%
-        return (uint8_t)((filteredVoltage - BATTERY_VOLTAGE_MIN) * 20 / (46500UL - BATTERY_VOLTAGE_MIN));
+        // Steiler Abfall am Schluss (15% bis 0%) => 15% Spannweite
+        uint32_t diff = filteredVoltage - BATTERY_VOLTAGE_MIN;
+        uint32_t resultQ8 = (diff * 15 << 8) / (LOWER_LINEAR_END - BATTERY_VOLTAGE_MIN);
+        return (uint8_t)((resultQ8 + 128) >> 8);
     }
 }
 
@@ -217,21 +224,19 @@ void torqueTask(void *parameter) {
 
         
         if ((currentTime - lastWriteTime) >= pdMS_TO_TICKS(25)) {
-            if (motorState.motorSpeed >= MINSPEED && motorState.motorlevel > 0 && motorState.rekupLevel==0) {
-                writeBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_LEVEL, motorState.motorlevel);
-                // Serial.println(" write motorlevel: " + String(motorState.motorlevel));
-                lastWriteTime = currentTime;
-                lastwrittenLevel = motorState.motorlevel;
-            } else if (motorState.motorlevel == 0 && lastwrittenLevel != 0) {
-                writeBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_LEVEL, 0);
-                lastWriteTime = currentTime;
-                lastwrittenLevel = motorState.motorlevel;
-            }
+            int16_t targetLevel = 0;
+            
             if (motorState.rekupLevel < 0) {
-                writeBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_LEVEL, motorState.rekupLevel * 64 / 150);
+                targetLevel = motorState.rekupLevel * 64 / 150;
+            } else if (motorState.motorlevel > 0) {
+                targetLevel = motorState.motorlevel;
+            }
+
+            if (targetLevel != 0 || lastwrittenLevel != 0) {
+                writeBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_LEVEL, targetLevel);
                 lastWriteTime = currentTime;
-                lastwrittenLevel = motorState.motorlevel;
-        }
+                lastwrittenLevel = targetLevel;
+            }
         }
         
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
@@ -304,6 +309,9 @@ void statusTask(void *parameter) {
                 if (motorState.motorSpeed > 0) {
                     lastActivityTime = xTaskGetTickCount();
                 }
+                break;
+            case 5:
+                readBionxRegister(BXID_MOTOR, REG_MOTOR_STATUS_TEMPERATURE, &motorState.motorTemperature);
                 int16_t batterylevel = calculateBatteryLevel(motorState.motorVoltage);
                 updateDisplay(motorState.assistLevel, motorState.rekupLevel, motorState.motorSpeed,
                               motorState.motorStatus, batterylevel, motorState.motorlevel, motorState.light);
@@ -313,14 +321,14 @@ void statusTask(void *parameter) {
                             motorState.motorPower, motorState.motorVoltage, 
                             motorState.currentMotorPower, motorState.motorSpeed);
 
-                Serial.printf("Mode:%1d  Assist:%1d  Rekup:%1d  Bat:%3d%%\r\n", 
+                Serial.printf("Mode:%1d  Assist:%1d  Rekup:%1d  Bat:%3d%% Temp:%dc\r\n", 
                             motorState.motorStatus, motorState.assistLevel, 
-                            motorState.rekupLevel, batterylevel);         
+                            motorState.rekupLevel, batterylevel, motorState.motorTemperature);         
                 break;
         }
 
 
-        caseCounter = (caseCounter + 1) % 5;  // Zyklisch in 5 Schritten
+        caseCounter = (caseCounter + 1) % 6;  // Zyklisch in 6 Schritten
 
 
         //xQueueReceive(torqueQueue, &motorState.rawTorque, 0);

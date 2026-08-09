@@ -58,8 +58,13 @@ else {
 }
 void glue_set_settings(struct settings *data) {
   temp2=data->maxspeed;
- // writeBionxRegister(BXID_MOTOR, REG_MOTOR_TORQUE_GAUGE_GAIN, data->gaugegain);
- // writeBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_MAXSPEED, data->maxspeed);
+  writeBionxRegister(BXID_MOTOR, REG_MOTOR_TORQUE_GAUGE_GAIN, data->gaugegain);
+  writeBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_MAXSPEED, data->maxspeed);
+  writeBionxRegister(BXID_MOTOR, REG_MOTOR_GEOMETRY_CIRC_HI, data->wheeldiameter >> 8);
+  writeBionxRegister(BXID_MOTOR, REG_MOTOR_GEOMETRY_CIRC_LO, data->wheeldiameter & 0xFF);
+  writeBionxRegister(BXID_MOTOR, REG_MOTOR_CONFIG_MAX_DISCHARGE_HI, data->maxcurrent >> 8);
+  writeBionxRegister(BXID_MOTOR, REG_MOTOR_CONFIG_MAX_DISCHARGE_LO, data->maxcurrent & 0xFF);
+  writeBionxRegister(BXID_MOTOR, REG_MOTOR_ASSIST_WALK_LEVEL, data->walklevel);
 }
 
 static struct state s_state={"1.0.2",100,235,300,25};  // Initial version, update as needed
@@ -71,6 +76,16 @@ s_state.temperature = 25; // Example values, sync with your device
 */
 void glue_get_state(struct state *data) {
   *data = s_state;  // Sync with your device
+  //data->battery = calculateBatteryLevel(motorState.motorVoltage);
+  data->power = motorState.motorPower;
+  data->torque = motorState.gauge;
+  data->temperature = motorState.motorTemperature;
+  data->voltage = motorState.motorVoltage / 1000.0;
+  if (motorState.motorVoltage > 0) {
+      data->current = (double)motorState.currentMotorPower / ((double)motorState.motorVoltage / 1000.0);
+  } else {
+      data->current = 0.0;
+  }
 }
 
 void *glue_ota_begin_firmware_update(char *file_name, size_t total_size) {

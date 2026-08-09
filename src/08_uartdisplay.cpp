@@ -228,6 +228,14 @@ void updateDisplay(int16_t assistLevel, int8_t rekupLevel, uint8_t motorSpeed, u
     int8_t segmentdisp;
     int8_t error = 0;
 
+    // CAN-Fehleranzeige hat höchste Priorität (5s lang)
+    if (can_display_error_code != 0 &&
+        (uint32_t)millis() < can_error_display_until_ms) {
+        error = (int8_t)can_display_error_code;  // E1=BUS_OFF, E2=STOPPED, E3=Timeout
+    } else if (batteryLevel == 0) {
+        error = 1;
+    }
+
     if (light ||rekupLevel < 0) {
         if (rekupLevel < 0) {
             segmentdisp = 110 - rekupLevel / 16;  // 7-Segment Anzeige A0-A9, 110 = b0-b9 
@@ -240,9 +248,7 @@ void updateDisplay(int16_t assistLevel, int8_t rekupLevel, uint8_t motorSpeed, u
         segmentdisp = motorSpeed; // Speed auf Bar-Graph wenn Licht aus
     }
 
-    if (batteryLevel == 0) {
-        error = 1;
-    }
+
 
     tx_frame[0] = 0x55;
     tx_frame[1] = 0xAA;

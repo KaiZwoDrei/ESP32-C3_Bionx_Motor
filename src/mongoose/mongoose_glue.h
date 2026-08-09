@@ -88,6 +88,9 @@ struct settings {
   int gaugegain;
   bool read;
   int maxspeed;
+  int wheeldiameter;
+  int maxcurrent;
+  int walklevel;
 };
 void glue_get_settings(struct settings *);
 void glue_set_settings(struct settings *);
@@ -106,6 +109,8 @@ struct state {
   int power;
   int torque;
   int temperature;
+  double voltage;
+  double current;
 };
 void glue_get_state(struct state *);
 

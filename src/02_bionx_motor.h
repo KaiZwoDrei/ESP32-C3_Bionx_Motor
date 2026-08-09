@@ -66,6 +66,7 @@ uint8_t safeWriteBionxRegister(uint8_t device, uint8_t reg, uint16_t value);
 
 // Funktionsdeklarationen
 void setupBionx();
+uint8_t calculateBatteryLevel(uint32_t Voltage);
 uint16_t processTorque(uint16_t rawTorque);
 
 void printTaskStats();
